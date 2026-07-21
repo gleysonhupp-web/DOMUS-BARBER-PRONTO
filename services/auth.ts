@@ -75,7 +75,7 @@ export const authService = {
   },
 
   // Sign in user
-  signIn: async (email: string): Promise<{ success: boolean; error?: string; user?: UserProfile; company?: Company | null }> => {
+  signIn: async (email: string, password?: string): Promise<{ success: boolean; error?: string; user?: UserProfile; company?: Company | null }> => {
     if (isMockMode) {
       await new Promise(resolve => setTimeout(resolve, 500));
 
@@ -83,7 +83,22 @@ export const authService = {
       const user = profiles.find(p => p.email.toLowerCase() === email.toLowerCase());
 
       if (!user) {
-        return { success: false, error: 'E-mail não encontrado ou senha incorreta.' };
+        return { success: false, error: 'E-mail ou senha incorretos.' };
+      }
+
+      // In mock mode, we store a simple password in localStorage keyed by email.
+      // Default password for the demo account is '123456'
+      if (typeof window !== 'undefined') {
+        const storedPasswords: Record<string, string> = JSON.parse(localStorage.getItem('domus_passwords') || '{}');
+        // Default password for existing demo user if not set
+        if (!storedPasswords[email.toLowerCase()]) {
+          storedPasswords[email.toLowerCase()] = '123456';
+          localStorage.setItem('domus_passwords', JSON.stringify(storedPasswords));
+        }
+        const correctPassword = storedPasswords[email.toLowerCase()];
+        if (password && correctPassword && password !== correctPassword) {
+          return { success: false, error: 'E-mail ou senha incorretos.' };
+        }
       }
 
       db.setCurrentUser(user);
@@ -108,7 +123,7 @@ export const authService = {
       try {
         const { data, error } = await supabase!.auth.signInWithPassword({
           email,
-          password: 'tempPassword123!' // Placeholder
+          password: password || ''
         });
 
         if (error) throw error;
@@ -144,6 +159,7 @@ export const authService = {
       }
     }
   },
+
 
   // Onboard new company
   onboardCompany: async (userId: string, companyName: string, slug: string): Promise<{ success: boolean; error?: string; company?: Company }> => {
