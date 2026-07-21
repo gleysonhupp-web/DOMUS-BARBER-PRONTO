@@ -200,11 +200,18 @@ export default function WhatsappPage() {
       }
 
       if (data.base64) {
+        if (data.mockMode) {
+          // In mock mode, don't show the real QR, just a mock visual, or let it connect instantly
+          addLog('MODO DEMONSTRAÇÃO: Simulando leitura do QR Code...', 'info');
+          // We delay the startPolling so the user sees the "QR Code" phase for 3 seconds
+          setTimeout(() => {
+            startPolling(instanceName);
+          }, 3000);
+        } else {
+          startPolling(instanceName);
+        }
         setQrBase64(data.base64);
         setStatus('qr_ready');
-        addLog('QR Code gerado! Escaneie com seu WhatsApp.', 'success');
-        toast('QR Code pronto! Escaneie com seu celular.', 'success', 'QR Pronto');
-        startPolling(instanceName);
       } else {
         // May already be connected
         const state = await checkStatus(instanceName);

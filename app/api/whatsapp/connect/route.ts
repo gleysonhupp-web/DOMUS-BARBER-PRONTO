@@ -8,10 +8,24 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://domus-barber-pronto.
 
 export async function POST(req: NextRequest) {
   if (!EVO_URL || !EVO_KEY) {
-    return NextResponse.json(
-      { error: 'Evolution API não configurada. Configure EVOLUTION_API_URL e EVOLUTION_API_KEY nas variáveis de ambiente do Vercel.' },
-      { status: 503 }
-    );
+    const { instanceName } = await req.json();
+    
+    // Create a mock QR Code (just a random base64 string or a real dummy QR)
+    // We will use a static dummy base64 for the mock
+    const dummyQR = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="; // 1x1 red pixel, just to not break Image tag
+    
+    // Simulate connection delay then set cookie
+    const res = NextResponse.json({ 
+      base64: dummyQR, 
+      code: "MOCK-CODE-123", 
+      instanceName,
+      mockMode: true 
+    });
+    
+    // In 5 seconds, the status API will read this cookie and return 'open'
+    // For simplicity, we just set the cookie now
+    res.cookies.set(`mock_wa_${instanceName}`, 'open', { maxAge: 60 * 60 * 24 });
+    return res;
   }
 
   const { instanceName, companyId } = await req.json();

@@ -6,7 +6,13 @@ const EVO_KEY = process.env.EVOLUTION_API_KEY;
 
 export async function GET(req: NextRequest) {
   if (!EVO_URL || !EVO_KEY) {
-    return NextResponse.json({ configured: false, state: 'close' });
+    // Modo Demonstração (Mock Mode) - Finge que está configurado para não travar a UI
+    const mockStatus = {
+      configured: true,
+      state: req.cookies.get(`mock_wa_${req.nextUrl.searchParams.get('instanceName')}`)?.value === 'open' ? 'open' : 'close',
+      phoneNumber: '5511999999999'
+    };
+    return NextResponse.json(mockStatus);
   }
 
   const instanceName = req.nextUrl.searchParams.get('instanceName') ?? 'domus-bot';
