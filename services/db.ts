@@ -451,8 +451,13 @@ export const db = {
   getCompanies: (): Company[] => get(KEYS.COMPANIES, defaultCompanies),
   saveCompanies: (items: Company[]) => set(KEYS.COMPANIES, items),
   
-  getProfiles: (): UserProfile[] => get(KEYS.USER_PROFILES, defaultProfiles),
+  getProfiles: (): UserProfile[] => get<UserProfile[]>(KEYS.USER_PROFILES, defaultProfiles),
   saveProfiles: (items: UserProfile[]) => set(KEYS.USER_PROFILES, items),
+
+  getSubscriptions: (companyId: string): CompanySubscription[] => {
+    const subs = get<CompanySubscription[]>(KEYS.SUBSCRIPTIONS, defaultSubscriptions);
+    return subs.filter(s => s.company_id === companyId);
+  },
 
   getMembers: (): CompanyMember[] => get(KEYS.MEMBERS, defaultMembers),
   saveMembers: (items: CompanyMember[]) => set(KEYS.MEMBERS, items),
