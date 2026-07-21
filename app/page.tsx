@@ -153,7 +153,7 @@ export default function LandingPage() {
             <p className="text-xs text-muted-foreground max-w-md mt-1">Crie sua conta grátis, selecione um plano e comece a usar sem fidelidades.</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+          <div className="grid grid-cols-1 gap-6 max-w-sm mx-auto">
             {plans.map((plan) => {
               const features = Array.isArray(plan.features) ? plan.features : JSON.parse(plan.features as any);
 
@@ -191,12 +191,8 @@ export default function LandingPage() {
                     </ul>
                   </div>
 
-                  <Link href="/register" className={`w-full py-2.5 rounded-lg text-xs font-bold text-center transition-all ${
-                    plan.name === 'Premium'
-                      ? 'bg-primary text-primary-foreground hover:bg-bronze-500 shadow shadow-primary/10'
-                      : 'bg-secondary text-foreground hover:bg-secondary/70 border border-border/80'
-                  }`}>
-                    Começar Teste Grátis
+                  <Link href="/login" className={`w-full py-2.5 rounded-lg text-xs font-bold text-center transition-all bg-primary text-primary-foreground hover:bg-bronze-500 shadow shadow-primary/10`}>
+                    Acessar Minha Conta
                   </Link>
                 </div>
               );

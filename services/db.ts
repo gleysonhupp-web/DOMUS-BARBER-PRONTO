@@ -34,32 +34,18 @@ const DEFAULT_USER_ID = 'u2222222-2222-2222-2222-222222222222';
 
 const defaultPlans: SubscriptionPlan[] = [
   {
-    id: 'a3f9e9d1-d22f-410a-9d93-123456789abc',
-    name: 'Classic',
-    description: 'Ideal para profissionais autônomos.',
-    price: 49.90,
+    id: 'plan-domus-199',
+    name: 'Plano Único DOMUS',
+    description: 'Acesso total a todas as ferramentas do sistema (Agenda, Estoque, Financeiro, WhatsApp IA).',
+    price: 199.97,
     interval: 'month',
-    features: ["Agenda Online", "Link Público de Agendamento", "Cadastro de até 150 clientes", "Relatórios Financeiros Básicos"],
-    is_active: true,
-    created_at: new Date().toISOString()
-  },
-  {
-    id: 'b4e8e8c2-e31f-420b-bd82-23456789abcd',
-    name: 'Premium',
-    description: 'Ideal para barbearias de médio e grande porte.',
-    price: 99.90,
-    interval: 'month',
-    features: ["Tudo no Classic", "IA de Atendimento no WhatsApp", "Controle de Estoque Inteligente", "Até 10 Profissionais", "Gestão de Comissões"],
-    is_active: true,
-    created_at: new Date().toISOString()
-  },
-  {
-    id: 'c5d7d7b3-f40e-430c-cd71-3456789abcde',
-    name: 'Elite',
-    description: 'Solução completa com consultoria e suporte VIP.',
-    price: 199.90,
-    interval: 'month',
-    features: ["Tudo no Premium", "Número de Profissionais Ilimitado", "IA no WhatsApp Avançada (Configurável)", "Suporte Prioritário", "Personalização Visual Completa"],
+    features: [
+      "Agenda Online Ilimitada", 
+      "Link Público de Agendamento", 
+      "Atendimento Automático no WhatsApp", 
+      "Controle de Estoque e Finanças", 
+      "Profissionais Ilimitados"
+    ],
     is_active: true,
     created_at: new Date().toISOString()
   }
@@ -414,10 +400,10 @@ const defaultSubscriptions: CompanySubscription[] = [
   {
     id: 'sub1',
     company_id: DEFAULT_COMPANY_ID,
-    plan_id: 'b4e8e8c2-e31f-420b-bd82-23456789abcd', // Premium
-    status: 'active',
-    current_period_start: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
-    current_period_end: new Date(Date.now() + 20 * 24 * 60 * 60 * 1000).toISOString(),
+    plan_id: 'plan-domus-199',
+    status: 'trial',
+    current_period_start: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+    current_period_end: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // Expired 2 days ago
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   }
@@ -637,10 +623,10 @@ export const db = {
     const newSub: CompanySubscription = {
       id: `sub-${Math.random().toString(36).substr(2, 9)}`,
       company_id: company.id,
-      plan_id: 'b4e8e8c2-e31f-420b-bd82-23456789abcd', // Premium
+      plan_id: 'plan-domus-199', // Plano Único
       status: 'trial',
       current_period_start: new Date().toISOString(),
-      current_period_end: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days trial
+      current_period_end: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days trial
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };

@@ -253,8 +253,8 @@ export default function ConfiguracoesPage() {
                       </div>
                       <div>
                         <span className="text-xs text-muted-foreground font-bold uppercase tracking-wider block">Status da Assinatura</span>
-                        <Badge variant={subscription.status === 'active' ? 'success' : 'warning'} className="mt-1">
-                          {subscription.status === 'active' ? 'Assinatura Ativa' : 'Período de Teste'}
+                        <Badge variant={subscription.status === 'active' ? 'success' : (subscription.status === 'trial' ? 'warning' : 'destructive')} className="mt-1">
+                          {subscription.status === 'active' ? 'Assinatura Ativa' : (subscription.status === 'trial' ? 'Período de Teste' : 'Acesso Bloqueado')}
                         </Badge>
                       </div>
                     </div>
