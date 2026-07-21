@@ -1,7 +1,7 @@
 /* app/globals.css */
 /* Domus Design Language - Premium Styling Foundation */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;600;700;800&display=swap');
 @import "tailwindcss";
 
 :root {
@@ -130,7 +130,7 @@ body {
 
 /* Base custom styles */
 input, select, textarea {
-  transition: all 0.2s ease-in-out;
+  transition: all 0.15s ease-in-out;
 }
 
 input:focus, select:focus, textarea:focus {
@@ -138,3 +138,48 @@ input:focus, select:focus, textarea:focus {
   box-shadow: 0 0 0 2px rgba(193, 154, 107, 0.15) !important;
   outline: none;
 }
+
+/* ─── Mobile Performance Optimisations ─── */
+
+/* Remove tap highlight flash on Android/iOS */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Make sidebar and cards use GPU layers */
+.gpu-layer {
+  will-change: transform;
+  transform: translateZ(0);
+}
+
+/* Speed up all transitions globally on mobile */
+@media (max-width: 768px) {
+  *, *::before, *::after {
+    animation-duration: 0.15s !important;
+    transition-duration: 0.15s !important;
+  }
+
+  /* Avoid heavy blur on mobile (expensive to render) */
+  .glass-panel,
+  .glass-card {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
+/* Smooth scrolling performance */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Prevent layout shifts */
+img {
+  content-visibility: auto;
+}
+
+/* Touch-friendly tap targets */
+button, a {
+  touch-action: manipulation;
+  min-height: 44px;
+}
+
