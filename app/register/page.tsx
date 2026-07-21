@@ -18,6 +18,7 @@ export default function RegisterPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
 
@@ -33,6 +34,8 @@ export default function RegisterPage() {
       newErrors.email = 'Insira um e-mail válido.';
     }
     if (!phone) newErrors.phone = 'O número de celular é obrigatório.';
+    if (!password) newErrors.password = 'A senha é obrigatória.';
+    else if (password.length < 6) newErrors.password = 'A senha deve ter pelo menos 6 caracteres.';
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -41,7 +44,7 @@ export default function RegisterPage() {
 
     setIsLoading(true);
     try {
-      const res = await authService.signUp(email, name, phone);
+      const res = await authService.signUp(email, name, phone, password);
       if (res.success) {
         toast('Cadastro realizado com sucesso! Vamos criar sua barbearia agora.', 'success', 'Conta Criada');
         router.push('/onboarding');
@@ -71,8 +74,8 @@ export default function RegisterPage() {
       >
         {/* Branding header */}
         <div className="flex flex-col items-center text-center gap-2">
-          <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center text-primary-foreground font-bold shadow-lg shadow-primary/20">
-            <ScissorsLineDashed className="w-6 h-6 stroke-[2.5px]" />
+          <div className="w-20 h-20 rounded-2xl overflow-hidden shadow-xl shadow-primary/20 border-2 border-primary/30">
+            <img src="/logo.jpg" alt="DOMUS BARBER" className="w-full h-full object-cover" />
           </div>
           <h1 className="text-xl font-extrabold tracking-wide uppercase mt-2">CRIAR CONTA</h1>
           <p className="text-xs text-muted-foreground max-w-xs leading-relaxed">
@@ -110,6 +113,16 @@ export default function RegisterPage() {
             onChange={(e) => setPhone(e.target.value)}
             error={errors.phone}
             icon={<Phone className="w-4 h-4 text-muted-foreground/60" />}
+          />
+
+          <Input
+            type="password"
+            label="Senha"
+            placeholder="••••••••"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            error={errors.password}
+            icon={<ScissorsLineDashed className="w-4 h-4 text-muted-foreground/60" />}
           />
 
           <Button

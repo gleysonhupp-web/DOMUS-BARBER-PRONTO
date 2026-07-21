@@ -7,7 +7,7 @@ import { UserProfile, Company } from '../types';
 
 export const authService = {
   // Sign up user
-  signUp: async (email: string, fullName: string, phone: string = ''): Promise<{ success: boolean; error?: string; user?: UserProfile }> => {
+  signUp: async (email: string, fullName: string, phone: string = '', password?: string): Promise<{ success: boolean; error?: string; user?: UserProfile }> => {
     if (isMockMode) {
       // Simulate network latency
       await new Promise(resolve => setTimeout(resolve, 600));
@@ -15,6 +15,12 @@ export const authService = {
       const profiles = db.getProfiles();
       if (profiles.some(p => p.email === email)) {
         return { success: false, error: 'Email já cadastrado.' };
+      }
+
+      if (typeof window !== 'undefined' && password) {
+        const storedPasswords: Record<string, string> = JSON.parse(localStorage.getItem('domus_passwords') || '{}');
+        storedPasswords[email.toLowerCase()] = password;
+        localStorage.setItem('domus_passwords', JSON.stringify(storedPasswords));
       }
 
       const newUser: UserProfile = {
