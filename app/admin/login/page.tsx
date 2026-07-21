@@ -7,8 +7,8 @@ import { motion } from 'framer-motion';
 import { ShieldAlert, Lock, Mail, ArrowRight, Eye, EyeOff } from 'lucide-react';
 
 // ── Super Admin credentials (hardcoded for mock SaaS mode) ──────────────
-const ADMIN_EMAIL = 'superadmin@domusbarber.com.br';
-const ADMIN_PASSWORD = 'domus@admin2024';
+const ADMIN_EMAIL = 'admin@domusbarber.com.br';
+const ADMIN_PASSWORD = '123456';
 const ADMIN_SESSION_KEY = 'domus_super_admin_session';
 
 export default function AdminLoginPage() {
@@ -85,7 +85,7 @@ export default function AdminLoginPage() {
                 type="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                placeholder="superadmin@domussaas.com.br"
+                placeholder="admin@domusbarber.com.br"
                 autoFocus
                 className="w-full pl-9 pr-4 py-3 text-sm bg-secondary/40 border border-border/60 rounded-lg outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 text-foreground placeholder-muted-foreground/40 transition-all"
               />
