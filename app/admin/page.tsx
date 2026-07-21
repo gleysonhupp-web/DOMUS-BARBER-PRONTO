@@ -3,6 +3,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+
+const ADMIN_SESSION_KEY = 'domus_super_admin_session';
 import { db } from '../../services/db';
 import { authService } from '../../services/auth';
 import { ShieldAlert, Unlock, Lock, Search, Building2, Crown, ChevronLeft } from 'lucide-react';
@@ -20,12 +22,14 @@ export default function SuperAdminPage() {
   const [stats, setStats] = useState({ total: 0, active: 0, blocked: 0, mrr: 0 });
 
   useEffect(() => {
-    // Basic auth check
-    if (!authService.isAuthenticated()) {
-      router.push('/login');
-      return;
+    // Check for SUPER ADMIN session (separate from regular user)
+    if (typeof window !== 'undefined') {
+      const session = localStorage.getItem(ADMIN_SESSION_KEY);
+      if (!session) {
+        router.push('/admin/login');
+        return;
+      }
     }
-
     loadData();
   }, [router]);
 
@@ -103,9 +107,15 @@ export default function SuperAdminPage() {
         <div className="flex items-center gap-4 max-w-7xl mx-auto w-full">
           <ShieldAlert className="w-6 h-6 text-primary" />
           <h1 className="font-bold text-foreground">DOMUS Admin Console</h1>
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-2">
             <Button variant="ghost" size="sm" onClick={() => router.push('/dashboard')}>
               <ChevronLeft className="w-4 h-4 mr-2" /> Voltar ao App
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => {
+              if(typeof window !== 'undefined') localStorage.removeItem(ADMIN_SESSION_KEY);
+              router.push('/admin/login');
+            }}>
+              Sair
             </Button>
           </div>
         </div>

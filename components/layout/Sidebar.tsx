@@ -37,7 +37,6 @@ export const Sidebar = ({ className }: SidebarProps) => {
     { name: 'WhatsApp', href: '/whatsapp', icon: MessageSquareCode },
     { name: 'Auto-Atendimento', href: '/ia', icon: Brain },
     { name: 'Configurações', href: '/configuracoes', icon: Settings },
-    { name: 'Admin SaaS', href: '/admin', icon: Crown }, // Botão Super Admin
   ];
 
   const handleLogout = async () => {
