@@ -76,8 +76,8 @@ export default function LoginPage() {
       >
         {/* Branding header */}
         <div className="flex flex-col items-center text-center gap-2">
-          <div className="w-14 h-14 rounded-xl bg-primary flex items-center justify-center text-primary-foreground font-bold shadow-lg shadow-primary/20">
-            <ScissorsLineDashed className="w-7 h-7 stroke-[2.5px]" />
+          <div className="w-20 h-20 rounded-2xl overflow-hidden shadow-xl shadow-primary/20 border-2 border-primary/30">
+            <img src="/logo.jpg" alt="DOMUS BARBER" className="w-full h-full object-cover" />
           </div>
           <h1 className="text-xl font-extrabold tracking-wide uppercase mt-2">DOMUS BARBER</h1>
           <p className="text-xs text-muted-foreground max-w-xs leading-relaxed">
