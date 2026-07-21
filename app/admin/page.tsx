@@ -212,7 +212,7 @@ export default function SuperAdminPage() {
                           <td className="p-4">
                             {status === 'active' && <Badge variant="success">Ativo</Badge>}
                             {status === 'trial' && <Badge variant="warning">Período de Teste</Badge>}
-                            {isBlocked && <Badge variant="destructive">Bloqueado</Badge>}
+                            {isBlocked && <Badge variant="error">Bloqueado</Badge>}
                             {!status && <Badge variant="outline">Sem Plano</Badge>}
                           </td>
                           <td className="p-4 text-right">
