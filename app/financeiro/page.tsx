@@ -144,7 +144,6 @@ export default function FinanceiroPage() {
       return;
     }
     setIsSubmitting(true);
-    await new Promise((r) => setTimeout(r, 400));
 
     const tx: FinancialTransaction = {
       id: `t-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,

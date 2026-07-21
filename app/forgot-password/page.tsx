@@ -27,7 +27,6 @@ export default function ForgotPasswordPage() {
 
     setIsLoading(true);
     // Simulate recovery email send
-    await new Promise(resolve => setTimeout(resolve, 800));
     setIsLoading(false);
     setIsSent(true);
     toast('Instruções enviadas para o seu e-mail.', 'success', 'Recuperação Enviada');

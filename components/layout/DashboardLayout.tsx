@@ -20,7 +20,6 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
   useEffect(() => {
     const checkAuth = async () => {
       // Small artificial loading buffer to prevent screen flickers
-      await new Promise(resolve => setTimeout(resolve, 100));
 
       const isLoggedIn = authService.isAuthenticated();
       if (!isLoggedIn) {

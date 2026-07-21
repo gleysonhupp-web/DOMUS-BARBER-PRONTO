@@ -60,7 +60,6 @@ export default function ConfiguracoesPage() {
     if (!company) return;
 
     setIsSaving(true);
-    await new Promise(resolve => setTimeout(resolve, 800)); // mock network
 
     const updated = {
       ...company,

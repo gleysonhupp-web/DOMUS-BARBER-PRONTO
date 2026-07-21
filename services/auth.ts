@@ -10,7 +10,6 @@ export const authService = {
   signUp: async (email: string, fullName: string, phone: string = '', password?: string): Promise<{ success: boolean; error?: string; user?: UserProfile }> => {
     if (isMockMode) {
       // Simulate network latency
-      await new Promise(resolve => setTimeout(resolve, 600));
 
       const profiles = db.getProfiles();
       if (profiles.some(p => p.email === email)) {
@@ -83,7 +82,6 @@ export const authService = {
   // Sign in user
   signIn: async (email: string, password?: string): Promise<{ success: boolean; error?: string; user?: UserProfile; company?: Company | null }> => {
     if (isMockMode) {
-      await new Promise(resolve => setTimeout(resolve, 500));
 
       const profiles = db.getProfiles();
       const user = profiles.find(p => p.email.toLowerCase() === email.toLowerCase());
@@ -170,7 +168,6 @@ export const authService = {
   // Onboard new company
   onboardCompany: async (userId: string, companyName: string, slug: string): Promise<{ success: boolean; error?: string; company?: Company }> => {
     if (isMockMode) {
-      await new Promise(resolve => setTimeout(resolve, 800));
 
       const companies = db.getCompanies();
       if (companies.some(c => c.slug.toLowerCase() === slug.toLowerCase())) {

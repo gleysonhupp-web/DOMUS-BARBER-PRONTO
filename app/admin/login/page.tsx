@@ -29,7 +29,6 @@ export default function AdminLoginPage() {
     }
 
     setIsLoading(true);
-    await new Promise(r => setTimeout(r, 600)); // simulate request
 
     if (
       email.toLowerCase().trim() === ADMIN_EMAIL &&

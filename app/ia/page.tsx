@@ -171,7 +171,6 @@ export default function IAPage() {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
-    await new Promise((r) => setTimeout(r, 600));
     if (typeof window !== 'undefined') {
       localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(config));
     }
@@ -189,7 +188,6 @@ export default function IAPage() {
     setSimulateMsg('');
     setChatLogs((prev) => [...prev, { sender: 'client', text: msg, time: format(new Date(), 'HH:mm') }]);
     setIsResponding(true);
-    await new Promise((r) => setTimeout(r, 1400));
     const botResponse = aiActive
       ? `Entendido! Com base na sua mensagem: "${msg.slice(0, 40)}${msg.length > 40 ? '...' : ''}", posso ajudá-lo com agendamentos, preços e informações sobre nossa barbearia. Acesse nosso link de agendamento: ${typeof window !== 'undefined' ? window.location.origin : ''}/agendar/${company?.slug ?? 'barbearia'}`
       : '(DOMUS AI pausada. Ative-a para receber respostas automáticas.)';

@@ -91,7 +91,6 @@ export default function AppointmentModal({
     }
 
     setIsSubmitting(true);
-    await new Promise(resolve => setTimeout(resolve, 500)); // Latency mock
 
     const selectedService = services.find(s => s.id === formService);
     const selectedClient = clients.find(c => c.id === formClient);

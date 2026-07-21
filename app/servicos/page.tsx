@@ -63,7 +63,6 @@ export default function ServicosPage() {
     }
 
     setIsSubmitting(true);
-    await new Promise(r => setTimeout(r, 400));
 
     const allServices = db.getServices(companyId!);
 

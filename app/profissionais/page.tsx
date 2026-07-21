@@ -61,7 +61,6 @@ export default function ProfissionaisPage() {
     }
 
     setIsSubmitting(true);
-    await new Promise(r => setTimeout(r, 400));
 
     const allProfs = db.getProfessionals(companyId!);
 

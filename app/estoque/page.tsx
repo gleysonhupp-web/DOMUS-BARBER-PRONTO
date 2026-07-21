@@ -117,7 +117,6 @@ export default function EstoquePage() {
       return;
     }
     setIsSubmittingProduct(true);
-    await new Promise((r) => setTimeout(r, 400));
 
     const newProduct: Product = {
       id: `pr-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
@@ -181,7 +180,6 @@ export default function EstoquePage() {
       return;
     }
     setIsSubmittingMov(true);
-    await new Promise((r) => setTimeout(r, 400));
 
     const mov: StockMovement = {
       id: `mov-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
