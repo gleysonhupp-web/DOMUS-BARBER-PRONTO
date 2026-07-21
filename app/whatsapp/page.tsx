@@ -41,7 +41,11 @@ export default function WhatsappPage() {
 
   const [status, setStatus] = useState<ConnectionStatus>('disconnected');
   const [phoneNumber, setPhoneNumber] = useState<string | null>(null);
-  const [instanceName, setInstanceName] = useState('domus-bot');
+  // Auto-set instance name from company slug
+  const [instanceName, setInstanceName] = useState(() => {
+    const c = db.getCurrentCompany();
+    return c?.slug ? `domus-${c.slug}`.slice(0, 32) : 'domus-bot';
+  });
   const [qrBase64, setQrBase64] = useState<string | null>(null);
   const [qrCountdown, setQrCountdown] = useState(60);
   const [isLoading, setIsLoading] = useState(false);
@@ -182,7 +186,7 @@ export default function WhatsappPage() {
       const res = await fetch('/api/whatsapp/connect', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ instanceName }),
+        body: JSON.stringify({ instanceName, companyId }),
       });
 
       const data = await res.json();
