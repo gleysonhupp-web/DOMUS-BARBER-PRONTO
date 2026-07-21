@@ -541,8 +541,6 @@ export const db = {
     }
     return sub;
   },
-  saveSubscriptions: (items: CompanySubscription[]) => set(KEYS.SUBSCRIPTIONS, items),
-
   getAuditLogs: (companyId: string): AuditLog[] => {
     const list = get<AuditLog[]>(KEYS.AUDIT_LOGS, []);
     const profiles = get<UserProfile[]>(KEYS.USER_PROFILES, defaultProfiles);
