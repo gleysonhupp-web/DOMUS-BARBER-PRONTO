@@ -458,6 +458,8 @@ export const db = {
     const subs = get<CompanySubscription[]>(KEYS.SUBSCRIPTIONS, defaultSubscriptions);
     return subs.filter(s => s.company_id === companyId);
   },
+  getAllSubscriptions: (): CompanySubscription[] => get<CompanySubscription[]>(KEYS.SUBSCRIPTIONS, defaultSubscriptions),
+  saveSubscriptions: (items: CompanySubscription[]) => set(KEYS.SUBSCRIPTIONS, items),
 
   getMembers: (): CompanyMember[] => get(KEYS.MEMBERS, defaultMembers),
   saveMembers: (items: CompanyMember[]) => set(KEYS.MEMBERS, items),

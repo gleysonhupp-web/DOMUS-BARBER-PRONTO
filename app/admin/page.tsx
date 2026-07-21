@@ -44,7 +44,7 @@ export default function SuperAdminPage() {
   const loadData = () => {
     const allComps = db.getCompanies();
     const allUsers = db.getProfiles();
-    const allSubs = db.getSubscriptions();
+    const allSubs = db.getAllSubscriptions();
 
     setCompanies(allComps);
     setUsers(allUsers);
