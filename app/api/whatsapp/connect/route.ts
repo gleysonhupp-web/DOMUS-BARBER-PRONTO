@@ -54,27 +54,14 @@ export async function POST(req: NextRequest) {
         instanceName: cleanInstance,
         token: EVO_KEY,
         qrcode: true,
-        number: '',
-        integration: 'WHATSAPP-BAILEYS',
-        webhook: {
-          url: webhookUrl,
-          byEvents: true,
-          base64: false,
-          events: [
-            'APPLICATION_STARTUP',
-            'MESSAGES_UPSERT',
-            'MESSAGES_UPDATE',
-            'CONNECTION_UPDATE',
-            'QRCODE_UPDATED',
-          ],
-        },
-        settings: {
-          rejectCall: true,
-          msgCall: 'No momento não posso atender ligações. Envie uma mensagem!',
-          groupsIgnore: true,
-          alwaysOnline: true,
-          readMessages: true,
-        },
+        webhook_uri: webhookUrl,
+        webhook_events: [
+          'APPLICATION_STARTUP',
+          'MESSAGES_UPSERT',
+          'MESSAGES_UPDATE',
+          'CONNECTION_UPDATE',
+          'QRCODE_UPDATED',
+        ]
       }),
     });
 
@@ -83,6 +70,7 @@ export async function POST(req: NextRequest) {
       // 409 = already exists, that's fine, proceed
       if (createRes.status !== 409) {
         console.warn(`[WA] create failed (${createRes.status}): ${errText}`);
+        return NextResponse.json({ error: `Falha ao criar instância: ${errText}` }, { status: 502 });
       }
     }
 
