@@ -126,13 +126,9 @@ async function sendWhatsAppMessage(instanceName: string, number: string, text: s
       },
       body: JSON.stringify({
         number,
-        options: {
-          delay: 1500, // type effect delay
-          presence: 'composing'
-        },
-        textMessage: {
-          text
-        }
+        text,
+        delay: 1500,
+        presence: 'composing'
       })
     });
     console.log(`[WA] Replied to ${number}`);

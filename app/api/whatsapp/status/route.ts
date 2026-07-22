@@ -18,7 +18,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(mockStatus);
   }
 
-  const instanceName = req.nextUrl.searchParams.get('instanceName') ?? 'domus-bot';
+  const rawInstance = req.nextUrl.searchParams.get('instanceName') ?? 'domus-bot';
+  const instanceName = rawInstance
+    .toLowerCase()
+    .replace(/[^a-z0-9-_]/g, '-')
+    .replace(/-+/g, '-')
+    .slice(0, 32);
 
   try {
     const res = await fetch(`${EVO_URL}/instance/connectionState/${instanceName}`, {
