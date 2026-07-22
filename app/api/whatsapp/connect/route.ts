@@ -68,8 +68,10 @@ export async function POST(req: NextRequest) {
 
     if (!createRes.ok) {
       const errText = await createRes.text();
-      // 409 = already exists, that's fine, proceed
-      if (createRes.status !== 409) {
+      // 409 = already exists, 403 = forbidden/already in use
+      const isAlreadyInUse = createRes.status === 409 || (createRes.status === 403 && errText.includes('already in use'));
+      
+      if (!isAlreadyInUse) {
         console.warn(`[WA] create failed (${createRes.status}): ${errText}`);
         return NextResponse.json({ error: `Falha ao criar instância: ${errText}` }, { status: 502 });
       }
