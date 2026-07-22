@@ -2,7 +2,10 @@
 // Automatically creates a WhatsApp instance for each company in the SaaS
 import { NextRequest, NextResponse } from 'next/server';
 
-const EVO_URL = process.env.EVOLUTION_API_URL?.replace(/\/$/, '');
+let EVO_URL = process.env.EVOLUTION_API_URL?.replace(/\/$/, '');
+if (EVO_URL && !EVO_URL.startsWith('http')) {
+  EVO_URL = `https://${EVO_URL}`;
+}
 const EVO_KEY = process.env.EVOLUTION_API_KEY;
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://domus-barber-pronto.vercel.app';
 

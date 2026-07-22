@@ -4,7 +4,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-const EVO_URL = process.env.EVOLUTION_API_URL?.replace(/\/$/, '');
+let EVO_URL = process.env.EVOLUTION_API_URL?.replace(/\/$/, '');
+if (EVO_URL && !EVO_URL.startsWith('http')) {
+  EVO_URL = `https://${EVO_URL}`;
+}
 const EVO_KEY = process.env.EVOLUTION_API_KEY;
 
 // Temporary memory store for chat history (will reset on server restart, use DB in prod)
