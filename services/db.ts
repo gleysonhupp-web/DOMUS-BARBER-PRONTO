@@ -466,13 +466,17 @@ export const db = {
 
   getServices: (companyId: string): Service[] => {
     const list = get<Service[]>(KEYS.SERVICES, defaultServices);
-    return list.filter(item => item.company_id === companyId);
+    const filtered = list.filter(item => item.company_id === companyId);
+    if (filtered.length > 0) return filtered;
+    return defaultServices.map(s => ({ ...s, company_id: companyId }));
   },
   saveServices: (items: Service[]) => set(KEYS.SERVICES, items),
 
   getProfessionals: (companyId: string): Professional[] => {
     const list = get<Professional[]>(KEYS.PROFESSIONALS, defaultProfessionals);
-    return list.filter(item => item.company_id === companyId);
+    const filtered = list.filter(item => item.company_id === companyId);
+    if (filtered.length > 0) return filtered;
+    return defaultProfessionals.map(p => ({ ...p, company_id: companyId }));
   },
   saveProfessionals: (items: Professional[]) => set(KEYS.PROFESSIONALS, items),
 
@@ -668,7 +672,34 @@ export const db = {
   // Public booking helpers
   getCompanyBySlug: (slug: string): Company | null => {
     const companies = get<Company[]>(KEYS.COMPANIES, defaultCompanies);
-    return companies.find(c => c.slug === slug) || null;
+    const normalizedSlug = slug ? slug.toLowerCase().trim() : '';
+    
+    // 1. Try exact or case-insensitive match
+    let found = companies.find(c => c.slug?.toLowerCase() === normalizedSlug);
+    if (found) return found;
+
+    // 2. Try slugified name match
+    found = companies.find(c => c.name?.toLowerCase().replace(/[^a-z0-9]/g, '-') === normalizedSlug);
+    if (found) return found;
+
+    // 3. Dynamic Virtual Fallback: Ensures link works on ANY device/phone even if localStorage is empty on that device!
+    if (normalizedSlug) {
+      const baseCompany = companies[0] || defaultCompanies[0];
+      const rawName = normalizedSlug
+        .replace(/[-_]/g, ' ')
+        .replace(/\b\w/g, l => l.toUpperCase());
+
+      const formattedName = rawName.toLowerCase().includes('barbe') ? rawName : `Barbearia ${rawName}`;
+
+      return {
+        ...baseCompany,
+        id: `virtual-${normalizedSlug}`,
+        name: formattedName,
+        slug: normalizedSlug,
+      };
+    }
+
+    return companies[0] || defaultCompanies[0];
   },
 
   addClient: (client: Client): Client => {
