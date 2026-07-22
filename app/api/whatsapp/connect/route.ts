@@ -54,6 +54,7 @@ export async function POST(req: NextRequest) {
         instanceName: cleanInstance,
         token: EVO_KEY,
         qrcode: true,
+        integration: 'WHATSAPP-BAILEYS',
         webhook_uri: webhookUrl,
         webhook_events: [
           'APPLICATION_STARTUP',
