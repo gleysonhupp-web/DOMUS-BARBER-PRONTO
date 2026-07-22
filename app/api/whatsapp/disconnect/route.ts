@@ -1,7 +1,10 @@
 // app/api/whatsapp/disconnect/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 
-const EVO_URL = process.env.EVOLUTION_API_URL?.replace(/\/$/, '');
+let EVO_URL = process.env.EVOLUTION_API_URL?.replace(/\/$/, '');
+if (EVO_URL && !EVO_URL.startsWith('http')) {
+  EVO_URL = `https://${EVO_URL}`;
+}
 const EVO_KEY = process.env.EVOLUTION_API_KEY;
 
 export async function POST(req: NextRequest) {
@@ -12,8 +15,8 @@ export async function POST(req: NextRequest) {
   const { instanceName } = await req.json();
 
   try {
-    // Logout (keepes instance but disconnects session)
-    await fetch(`${EVO_URL}/instance/logout/${instanceName}`, {
+    // Delete the instance completely so they can start fresh and see the QR code
+    await fetch(`${EVO_URL}/instance/delete/${instanceName}`, {
       method: 'DELETE',
       headers: { 'apikey': EVO_KEY },
     });

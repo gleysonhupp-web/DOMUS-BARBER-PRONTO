@@ -37,11 +37,13 @@ export async function GET(req: NextRequest) {
     }
 
     const data = await res.json();
+    console.log('[WA status data]', JSON.stringify(data));
+    
     // Evolution API returns { instance: { state: 'open' | 'close' | 'connecting', ... } }
     const state = data?.instance?.state ?? data?.state ?? 'close';
     const phoneNumber = data?.instance?.profileName ?? data?.instance?.wuid?.split('@')[0] ?? null;
 
-    return NextResponse.json({ configured: true, state, phoneNumber });
+    return NextResponse.json({ configured: true, state, phoneNumber, raw: data });
   } catch (err: any) {
     console.error('[WA status error]', err);
     return NextResponse.json({ configured: true, state: 'close' });
