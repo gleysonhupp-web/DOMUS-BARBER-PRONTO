@@ -23,26 +23,42 @@ export async function POST(req: NextRequest) {
 
     console.log(`[WA Webhook] event=${event} instance=${instanceName}`);
 
-    if (event === 'messages.upsert' || event === 'MESSAGES_UPSERT') {
-      // Incoming message logic
-      let messages = payload?.data?.messages || [];
-      if (!Array.isArray(messages)) messages = [payload?.data]; // some evolution versions wrap differently
-      
+    if (event === 'messages.upsert' || event === 'MESSAGES_UPSERT' || event === 'SEND_MESSAGE') {
+      // Robust message extraction for Evolution API v1 & v2
+      let messages: any[] = [];
+      if (Array.isArray(payload?.data?.messages)) {
+        messages = payload.data.messages;
+      } else if (Array.isArray(payload?.data)) {
+        messages = payload.data;
+      } else if (payload?.data?.key) {
+        messages = [payload.data];
+      } else if (payload?.key) {
+        messages = [payload];
+      }
+
+      console.log(`[WA Webhook] Extracted ${messages.length} message(s)`);
+
       for (const msg of messages) {
         if (!msg || msg.key?.fromMe) continue; // Ignore own messages
+        if (msg.key?.remoteJid?.endsWith('@g.us')) continue; // Ignore group messages
 
-        const from = msg.key?.remoteJid?.replace('@s.whatsapp.net', '');
-        const text = msg.message?.conversation ?? msg.message?.extendedTextMessage?.text ?? '';
-        
+        const rawFrom = msg.key?.remoteJid || '';
+        const from = rawFrom.split('@')[0].split(':')[0];
+        const text =
+          msg.message?.conversation ??
+          msg.message?.extendedTextMessage?.text ??
+          msg.message?.imageMessage?.caption ??
+          msg.message?.videoMessage?.caption ??
+          '';
+
         if (!from || !text) continue;
 
         console.log(`[WA Webhook] Message from ${from}: ${text}`);
 
-        // If OPENAI is not configured, we can't reply intelligently
+        // If OPENAI is not configured, we send a fallback response
         if (!OPENAI_API_KEY) {
-          console.warn('[WA Webhook] OPENAI_API_KEY is not configured. Cannot reply.');
-          // Fallback static reply for testing if AI is missing
-          await sendWhatsAppMessage(instanceName, from, 'Olá! O sistema de Inteligência Artificial da barbearia está em manutenção no momento. Em breve retornaremos o atendimento automático.');
+          console.warn('[WA Webhook] OPENAI_API_KEY is not configured. Sending fallback message.');
+          await sendWhatsAppMessage(instanceName, from, 'Olá! Atendimento automático DOMUS AI ativo. (Configure sua OPENAI_API_KEY no Vercel para respostas inteligentes).');
           continue;
         }
 
@@ -56,12 +72,11 @@ export async function POST(req: NextRequest) {
         }
 
         // 2. Generate AI Response
-        const systemPrompt = `Você é uma assistente virtual educada e eficiente de uma barbearia premium. 
-Seu objetivo é agendar horários, tirar dúvidas sobre serviços e preços, e ser simpática.
-Responda de forma curta e objetiva, ideal para o WhatsApp. Use emojis com moderação.
-Os serviços disponíveis são: Corte de Cabelo, Barba, e Combos.
-Peça o nome do cliente se não souber, pergunte qual serviço deseja e sugira datas e horários.
-Sempre finalize de forma cordial.`;
+        const systemPrompt = `Você é a DOMUS AI, assistente virtual inteligente da barbearia.
+Seu objetivo é atender o cliente de forma educada, amigável e direta no WhatsApp.
+Serviços oferecidos: Corte de Cabelo (R$ 45), Barba (R$ 35), Combo Cabelo + Barba (R$ 70), Sobrancelha (R$ 15), Pigmentação (R$ 40).
+Horário de funcionamento: Terça a Sábado das 08h às 19h.
+Ajude o cliente a escolher serviços e agendar um horário. Responda em frases curtas e amigáveis com emojis moderados.`;
 
         const aiResponseText = await getOpenAIResponse(systemPrompt, memoryStore[from]);
 
