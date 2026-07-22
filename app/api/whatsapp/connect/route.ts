@@ -54,16 +54,39 @@ export async function POST(req: NextRequest) {
         instanceName: cleanInstance,
         token: EVO_KEY,
         qrcode: true,
-        integration: 'WHATSAPP-BAILEYS',
-        webhook_uri: webhookUrl,
-        webhook_events: [
+        integration: 'WHATSAPP-BAILEYS'
+      }),
+    });
+
+    // 1.5 Explicitly set Webhook using the dedicated endpoint for maximum compatibility
+    await fetch(`${EVO_URL}/webhook/set/${cleanInstance}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': EVO_KEY },
+      body: JSON.stringify({
+        webhook: {
+          enabled: true,
+          url: webhookUrl,
+          byEvents: true,
+          base64: false,
+          events: [
+            'APPLICATION_STARTUP',
+            'MESSAGES_UPSERT',
+            'CONNECTION_UPDATE',
+            'QRCODE_UPDATED'
+          ]
+        },
+        // Fallback flat format for some v2 versions
+        enabled: true,
+        url: webhookUrl,
+        webhook_by_events: true,
+        webhook_base64: false,
+        events: [
           'APPLICATION_STARTUP',
           'MESSAGES_UPSERT',
-          'MESSAGES_UPDATE',
           'CONNECTION_UPDATE',
-          'QRCODE_UPDATED',
+          'QRCODE_UPDATED'
         ]
-      }),
+      })
     });
 
     if (!createRes.ok) {
