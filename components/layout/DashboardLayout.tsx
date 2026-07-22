@@ -14,16 +14,20 @@ import Button from '../ui/Button';
 export const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
   const router = useRouter();
   const pathname = usePathname();
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return !authService.isAuthenticated();
+    }
+    return false;
+  });
   const [isBlocked, setIsBlocked] = useState(false);
 
   useEffect(() => {
     const checkAuth = async () => {
-      // Small artificial loading buffer to prevent screen flickers
-
       const isLoggedIn = authService.isAuthenticated();
       if (!isLoggedIn) {
         router.push('/login');
+        setLoading(false);
         return;
       }
 

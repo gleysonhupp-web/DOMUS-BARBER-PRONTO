@@ -161,11 +161,21 @@ export default function PublicBookingPage({
   const { slug } = use(params);
 
   // ── State ────────────────────────────────────────────────────────
-  const [loading, setLoading] = useState(true);
-  const [company, setCompany] = useState<Company | null>(null);
-  const [services, setServices] = useState<Service[]>([]);
-  const [professionals, setProfessionals] = useState<Professional[]>([]);
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  // ── State ────────────────────────────────────────────────────────
+  const [loading, setLoading] = useState(false);
+  const [company, setCompany] = useState<Company | null>(() => db.getCompanyBySlug(slug));
+  const [services, setServices] = useState<Service[]>(() => {
+    const comp = db.getCompanyBySlug(slug);
+    return comp ? db.getServices(comp.id).filter((s) => s.is_active) : [];
+  });
+  const [professionals, setProfessionals] = useState<Professional[]>(() => {
+    const comp = db.getCompanyBySlug(slug);
+    return comp ? db.getProfessionals(comp.id).filter((p) => p.is_active) : [];
+  });
+  const [appointments, setAppointments] = useState<Appointment[]>(() => {
+    const comp = db.getCompanyBySlug(slug);
+    return comp ? db.getAppointments(comp.id) : [];
+  });
 
   // Wizard
   const [step, setStep] = useState(0);
@@ -204,7 +214,6 @@ export default function PublicBookingPage({
       );
       setAppointments(db.getAppointments(comp.id));
     }
-    setLoading(false);
   }, [slug]);
 
   // ── Navigation ───────────────────────────────────────────────────
