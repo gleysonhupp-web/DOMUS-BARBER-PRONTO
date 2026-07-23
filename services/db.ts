@@ -982,6 +982,15 @@ export const db = {
     const filtered = list.filter(r => r.company_id === companyId);
     if (filtered.length > 0) return filtered;
     return defaultRewardItems.map(r => ({ ...r, company_id: companyId }));
+  },
+
+  // ─── Agenda Status (Abrir / Fechar Agenda) ─────────────────────────
+  getAgendaStatus: (companyId: string): boolean => {
+    return get<boolean>(`domus_agenda_open_${companyId}`, true);
+  },
+
+  setAgendaStatus: (companyId: string, isOpen: boolean): void => {
+    set(`domus_agenda_open_${companyId}`, isOpen);
   }
 };
 

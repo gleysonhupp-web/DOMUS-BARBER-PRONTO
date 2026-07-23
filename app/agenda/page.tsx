@@ -4,7 +4,10 @@ import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { PageHeader } from '../../components/ui/DashboardWidgets';
 import { db } from '../../services/db';
-import { Plus, ChevronLeft, ChevronRight, Calendar as CalendarIcon, LayoutList, CalendarDays, CalendarRange, Clock } from 'lucide-react';
+import { 
+  Plus, ChevronLeft, ChevronRight, Calendar as CalendarIcon, LayoutList, 
+  CalendarDays, CalendarRange, Clock, Lock, Unlock, AlertTriangle 
+} from 'lucide-react';
 import Button from '../../components/ui/Button';
 import { useToast } from '../../components/ui/Toast';
 import { format, addDays, subDays, startOfWeek, endOfWeek, isSameDay } from 'date-fns';
@@ -22,6 +25,7 @@ export type ViewType = 'day' | 'week' | 'month' | 'list';
 export default function AgendaPage() {
   const { toast } = useToast();
   const [company, setCompany] = useState<any>(null);
+  const [isAgendaOpen, setIsAgendaOpen] = useState<boolean>(true);
 
   const [appointments, setAppointments] = useState<any[]>([]);
   const [professionals, setProfessionals] = useState<any[]>([]);
@@ -39,8 +43,22 @@ export default function AgendaPage() {
     setCompany(c);
     if (c) {
       loadData(c.id);
+      setIsAgendaOpen(db.getAgendaStatus(c.id));
     }
   }, []);
+
+  const handleToggleAgendaStatus = () => {
+    if (!company) return;
+    const newStatus = !isAgendaOpen;
+    setIsAgendaOpen(newStatus);
+    db.setAgendaStatus(company.id, newStatus);
+
+    if (newStatus) {
+      toast('Agenda aberta com sucesso! Clientes já podem agendar normalmente no link público.', 'success', '🟢 Agenda Aberta');
+    } else {
+      toast('Agenda fechada com sucesso! Novos agendamentos online foram pausados.', 'warning', '🔴 Agenda Fechada');
+    }
+  };
 
   const loadData = (companyId: string) => {
     setAppointments(db.getAppointments(companyId));
@@ -104,11 +122,47 @@ export default function AgendaPage() {
         title="Agenda Online"
         description="Gerenciamento completo de horários e profissionais."
         actions={
-          <Button onClick={() => handleNewAppointmentClick()} className="flex items-center gap-2">
-            <Plus className="w-4 h-4" /> Novo Agendamento
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button 
+              onClick={handleToggleAgendaStatus} 
+              variant={isAgendaOpen ? "outline" : "primary"}
+              className={isAgendaOpen ? "text-red-400 border-red-500/40 hover:bg-red-500/10 font-bold text-xs" : "bg-green-500 hover:bg-green-600 text-black font-extrabold text-xs shadow-lg shadow-green-500/20"}
+            >
+              {isAgendaOpen ? (
+                <>
+                  <Lock className="w-3.5 h-3.5 mr-1.5" /> Fechar Agenda
+                </>
+              ) : (
+                <>
+                  <Unlock className="w-3.5 h-3.5 mr-1.5" /> Abrir Agenda
+                </>
+              )}
+            </Button>
+
+            <Button onClick={() => handleNewAppointmentClick()} className="flex items-center gap-2 text-xs">
+              <Plus className="w-4 h-4" /> Novo Agendamento
+            </Button>
+          </div>
         }
       />
+
+      {/* Agenda Closed Warning Banner */}
+      {!isAgendaOpen && (
+        <div className="mb-6 p-4 rounded-2xl border border-red-500/40 bg-red-500/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 select-none shadow-lg shadow-red-500/5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-red-500/20 border border-red-500/30 flex items-center justify-center text-red-400 shrink-0">
+              <AlertTriangle className="w-5 h-5" />
+            </div>
+            <div className="text-xs">
+              <span className="font-extrabold text-red-400 block text-sm mb-0.5">🔴 Agenda Online Fechada no Momento</span>
+              <span className="text-muted-foreground">Seus clientes não conseguirão realizar agendamentos online pelo link público até você reabrir a agenda.</span>
+            </div>
+          </div>
+          <Button onClick={handleToggleAgendaStatus} className="bg-green-500 hover:bg-green-600 text-black font-extrabold text-xs shrink-0 w-full sm:w-auto">
+            <Unlock className="w-3.5 h-3.5 mr-1" /> Reabrir Agenda Agora
+          </Button>
+        </div>
+      )}
 
       {/* Toolbar */}
       <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 p-4 rounded-xl border border-border/40 bg-card mb-6 shadow-sm">

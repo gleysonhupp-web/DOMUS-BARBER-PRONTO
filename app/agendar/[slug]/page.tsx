@@ -482,6 +482,40 @@ export default function PublicBookingPage({
     );
   }
 
+  // Agenda Fechada Check
+  if (!db.getAgendaStatus(company.id)) {
+    return (
+      <div className="min-h-screen bg-[#0B0F19] text-[#F3F4F6] flex flex-col items-center justify-center p-6 text-center select-none">
+        <div className="max-w-md w-full p-8 rounded-3xl bg-[#111827] border border-red-500/30 flex flex-col items-center gap-6 shadow-2xl animate-in fade-in zoom-in-95">
+          <div className="w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-400">
+            <AlertCircle className="w-8 h-8" />
+          </div>
+
+          <div className="space-y-2">
+            <span className="text-xs font-bold text-red-400 uppercase tracking-widest block">Aviso Importante</span>
+            <h1 className="text-2xl font-black text-white">Agenda Online Fechada</h1>
+            <p className="text-xs text-gray-400 leading-relaxed">
+              No momento a barbearia <strong className="text-amber-400">{company.name}</strong> está com os agendamentos online temporariamente pausados.
+            </p>
+          </div>
+
+          <div className="w-full p-4 rounded-xl bg-gray-800/40 border border-gray-700/50 text-xs text-gray-300">
+            Para dúvidas ou atendimentos de urgência, entre em contato direto pelo WhatsApp.
+          </div>
+
+          <a
+            href={`https://wa.me/55${company.slug}?text=${encodeURIComponent(`Olá ${company.name}! Gostaria de saber os horários disponíveis.`)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full py-3.5 px-6 rounded-xl bg-green-500 hover:bg-green-600 text-black font-extrabold text-xs transition-all shadow-lg shadow-green-500/20 flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <Phone className="w-4 h-4" /> Falar no WhatsApp da Barbearia
+          </a>
+        </div>
+      </div>
+    );
+  }
+
   // ─── Step renderers ──────────────────────────────────────────────
 
   const renderStep0_Welcome = () => (
