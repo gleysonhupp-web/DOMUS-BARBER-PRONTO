@@ -5,7 +5,7 @@ import {
   Company, UserProfile, CompanyMember, Service, Professional, 
   Client, Appointment, Product, StockMovement, FinancialTransaction, 
   WhatsAppConnection, AIConversation, SubscriptionPlan, CompanySubscription, AuditLog,
-  ClientSubscriptionPlan, ClientSubscription, BarberGoal, DailyMission, RewardItem
+  ClientSubscriptionPlan, ClientSubscription, BarberGoal, DailyMission, RewardItem, BankInfo
 } from '../types';
 import { isMockMode } from '../lib/supabase';
 
@@ -991,6 +991,31 @@ export const db = {
 
   setAgendaStatus: (companyId: string, isOpen: boolean): void => {
     set(`domus_agenda_open_${companyId}`, isOpen);
+  },
+
+  // ─── Bank Info (Conta de Recebimento de Assinaturas) ───────────────
+  getBankInfo: (companyId: string): BankInfo => {
+    const defaultInfo: BankInfo = {
+      company_id: companyId,
+      bank_name: 'Banco Nubank (0260)',
+      account_type: 'pj',
+      agency: '0001',
+      account_number: '1234567-8',
+      pix_key_type: 'cpf_cnpj',
+      pix_key: '12.345.678/0001-99',
+      holder_name: 'Domus Barber Club LTDA',
+      holder_document: '12.345.678/0001-99',
+      gateway_provider: 'asaas',
+      gateway_api_key: '$asaas_api_key_prod_live_891283918239',
+      auto_payout_enabled: true,
+      updated_at: new Date().toISOString()
+    };
+
+    return get<BankInfo>(`domus_bank_info_${companyId}`, defaultInfo);
+  },
+
+  saveBankInfo: (bankInfo: BankInfo): void => {
+    set(`domus_bank_info_${bankInfo.company_id}`, bankInfo);
   }
 };
 

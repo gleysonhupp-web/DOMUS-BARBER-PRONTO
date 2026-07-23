@@ -12,12 +12,12 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../components/ui/Ta
 import { useToast } from '../../components/ui/Toast';
 import { db } from '../../services/db';
 import { formatCurrency } from '../../lib/utils';
-import type { ClientSubscription, ClientSubscriptionPlan, ClientSubscriptionStatus, PaymentMethod } from '../../types';
+import type { ClientSubscription, ClientSubscriptionPlan, ClientSubscriptionStatus, PaymentMethod, BankInfo } from '../../types';
 import { 
   Crown, Users, DollarSign, AlertTriangle, CheckCircle2, Clock, 
   XCircle, Plus, Search, MessageCircle, Calendar, RefreshCw, 
   CreditCard, ShieldCheck, ExternalLink, Settings, Scissors,
-  Bot, Sparkles, Zap, ArrowRight, Check
+  Bot, Sparkles, Zap, ArrowRight, Check, Landmark, Building2, QrCode, KeyRound
 } from 'lucide-react';
 import { format, addDays, isBefore, parseISO } from 'date-fns';
 
@@ -33,6 +33,19 @@ export default function AssinaturasPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | ClientSubscriptionStatus>('all');
   const [activeTab, setActiveTab] = useState('subscribers');
+
+  // Bank Account State for Subscription Payouts
+  const [bankInfo, setBankInfo] = useState<BankInfo>(() => db.getBankInfo(companyId));
+
+  const handleSaveBankInfo = (e: React.FormEvent) => {
+    e.preventDefault();
+    db.saveBankInfo(bankInfo);
+    toast(
+      `Dados da conta ${bankInfo.bank_name} salvos com sucesso! Todas as assinaturas de cortes serão depositadas nesta conta.`,
+      'success',
+      '🏦 Conta Bancária Salva'
+    );
+  };
 
   // New Subscription Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -363,6 +376,9 @@ export default function AssinaturasPage() {
           <TabsTrigger value="plans" className="gap-2 text-xs font-bold">
             <Crown className="w-4 h-4 text-amber-400" /> Planos do Clube
           </TabsTrigger>
+          <TabsTrigger value="bank" className="gap-2 text-xs font-bold">
+            <Landmark className="w-4 h-4 text-green-400" /> Conta de Recebimento
+          </TabsTrigger>
         </TabsList>
 
         {/* TAB 1: CLIENT SUBSCRIBERS LIST */}
@@ -553,6 +569,192 @@ export default function AssinaturasPage() {
               </Card>
             ))}
           </div>
+        </TabsContent>
+
+        {/* TAB 3: BANK ACCOUNT & PAYOUT SETTINGS */}
+        <TabsContent value="bank">
+          <Card className="border border-border/60 max-w-3xl mx-auto">
+            <CardHeader className="border-b border-border/20 pb-4">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Landmark className="w-5 h-5 text-green-400" /> Cadastro da Conta Bancária para Recebimento
+              </CardTitle>
+              <CardDescription>
+                Cadastre sua conta bancária ou chave PIX para onde os pagamentos das assinaturas mensais dos clientes serão repassados automaticamente.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <form onSubmit={handleSaveBankInfo} className="space-y-6">
+                
+                {/* Bank Details */}
+                <div className="space-y-4">
+                  <h4 className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <Building2 className="w-4 h-4" /> Dados da Instituição Financeira
+                  </h4>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-xs font-semibold text-muted-foreground block mb-1">Banco / Instituição</label>
+                      <select
+                        value={bankInfo.bank_name}
+                        onChange={e => setBankInfo({ ...bankInfo, bank_name: e.target.value })}
+                        className="w-full bg-secondary border border-border text-foreground text-xs rounded-lg px-3 py-2.5 outline-none font-bold"
+                      >
+                        <option value="Banco Nubank (0260)">Banco Nubank (0260)</option>
+                        <option value="Banco Itaú Unibanco (0341)">Banco Itaú Unibanco (0341)</option>
+                        <option value="Banco Bradesco (0237)">Banco Bradesco (0237)</option>
+                        <option value="Banco do Brasil (0001)">Banco do Brasil (0001)</option>
+                        <option value="Banco Santander (0033)">Banco Santander (0033)</option>
+                        <option value="Banco Inter (0077)">Banco Inter (0077)</option>
+                        <option value="Banco C6 Bank (0336)">Banco C6 Bank (0336)</option>
+                        <option value="Caixa Econômica (0104)">Caixa Econômica (0104)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-semibold text-muted-foreground block mb-1">Tipo de Conta</label>
+                      <select
+                        value={bankInfo.account_type}
+                        onChange={e => setBankInfo({ ...bankInfo, account_type: e.target.value as any })}
+                        className="w-full bg-secondary border border-border text-foreground text-xs rounded-lg px-3 py-2.5 outline-none font-bold"
+                      >
+                        <option value="pj">Conta PJ (Pessoa Jurídica)</option>
+                        <option value="corrente">Conta Corrente (PF)</option>
+                        <option value="poupanca">Conta Poupança</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-semibold text-muted-foreground block mb-1">Número da Agência</label>
+                      <Input
+                        type="text"
+                        placeholder="0001"
+                        value={bankInfo.agency}
+                        onChange={e => setBankInfo({ ...bankInfo, agency: e.target.value })}
+                        className="text-xs font-mono"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-semibold text-muted-foreground block mb-1">Conta com Dígito</label>
+                      <Input
+                        type="text"
+                        placeholder="1234567-8"
+                        value={bankInfo.account_number}
+                        onChange={e => setBankInfo({ ...bankInfo, account_number: e.target.value })}
+                        className="text-xs font-mono"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="w-full border-t border-border/40" />
+
+                {/* PIX Key Section */}
+                <div className="space-y-4">
+                  <h4 className="text-xs font-bold text-green-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <QrCode className="w-4 h-4" /> Chave PIX para Recebimentos Instantâneos
+                  </h4>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-xs font-semibold text-muted-foreground block mb-1">Tipo de Chave PIX</label>
+                      <select
+                        value={bankInfo.pix_key_type}
+                        onChange={e => setBankInfo({ ...bankInfo, pix_key_type: e.target.value as any })}
+                        className="w-full bg-secondary border border-border text-foreground text-xs rounded-lg px-3 py-2.5 outline-none font-bold"
+                      >
+                        <option value="cpf_cnpj">CNPJ / CPF</option>
+                        <option value="email">E-mail</option>
+                        <option value="phone">Telefone Celular</option>
+                        <option value="random">Chave Aleatória (EVP)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-semibold text-muted-foreground block mb-1">Chave PIX Principal</label>
+                      <Input
+                        type="text"
+                        placeholder="Insira sua Chave PIX"
+                        value={bankInfo.pix_key}
+                        onChange={e => setBankInfo({ ...bankInfo, pix_key: e.target.value })}
+                        className="text-xs font-mono"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-semibold text-muted-foreground block mb-1">Nome do Titular / Razão Social</label>
+                      <Input
+                        type="text"
+                        placeholder="Domus Barber Club LTDA"
+                        value={bankInfo.holder_name}
+                        onChange={e => setBankInfo({ ...bankInfo, holder_name: e.target.value })}
+                        className="text-xs"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-semibold text-muted-foreground block mb-1">CPF / CNPJ do Titular</label>
+                      <Input
+                        type="text"
+                        placeholder="12.345.678/0001-99"
+                        value={bankInfo.holder_document}
+                        onChange={e => setBankInfo({ ...bankInfo, holder_document: e.target.value })}
+                        className="text-xs font-mono"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="w-full border-t border-border/40" />
+
+                {/* Gateway Integration Key */}
+                <div className="space-y-4">
+                  <h4 className="text-xs font-bold text-blue-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <KeyRound className="w-4 h-4" /> Gateway de Pagamento Recorrente (API)
+                  </h4>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-xs font-semibold text-muted-foreground block mb-1">Provedor do Gateway</label>
+                      <select
+                        value={bankInfo.gateway_provider || 'asaas'}
+                        onChange={e => setBankInfo({ ...bankInfo, gateway_provider: e.target.value as any })}
+                        className="w-full bg-secondary border border-border text-foreground text-xs rounded-lg px-3 py-2.5 outline-none font-bold"
+                      >
+                        <option value="asaas">Asaas Subscrições / Cartão & PIX</option>
+                        <option value="mercadopago">Mercado Pago Assinaturas</option>
+                        <option value="pagarme">Pagar.me / Stone Recorrência</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-semibold text-muted-foreground block mb-1">Chave de API de Integração</label>
+                      <Input
+                        type="password"
+                        placeholder="$asaas_api_key_prod_..."
+                        value={bankInfo.gateway_api_key || ''}
+                        onChange={e => setBankInfo({ ...bankInfo, gateway_api_key: e.target.value })}
+                        className="text-xs font-mono"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-green-500/10 border border-green-500/30 flex items-center gap-3 text-xs text-green-300">
+                  <ShieldCheck className="w-5 h-5 text-green-400 shrink-0" />
+                  <div>
+                    <span className="font-extrabold block text-foreground">Depósitos Diretos e Automáticos</span>
+                    <span>O valor cobrado nos cartões e PIX dos assinantes será liquidado diretamente nesta conta bancária.</span>
+                  </div>
+                </div>
+
+                <Button type="submit" className="w-full font-extrabold text-xs">
+                  <CheckCircle2 className="w-4 h-4 mr-2" /> Salvar Dados Bancários e Chave PIX
+                </Button>
+
+              </form>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
 

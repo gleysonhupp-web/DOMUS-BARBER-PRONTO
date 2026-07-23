@@ -275,3 +275,21 @@ export interface RewardItem {
   available: boolean;
 }
 
+// ─── Bank Info (Conta de Recebimento de Assinaturas) ───────────────
+export interface BankInfo {
+  company_id: string;
+  bank_name: string;
+  account_type: 'corrente' | 'poupanca' | 'pj';
+  agency: string;
+  account_number: string;
+  pix_key_type: 'cpf_cnpj' | 'email' | 'phone' | 'random';
+  pix_key: string;
+  holder_name: string;
+  holder_document: string;
+  gateway_provider?: 'asaas' | 'mercadopago' | 'pagarme';
+  gateway_api_key?: string;
+  auto_payout_enabled: boolean;
+  updated_at: string;
+}
+
+
