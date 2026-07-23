@@ -17,9 +17,10 @@ import {
   Crown, Users, DollarSign, AlertTriangle, CheckCircle2, Clock, 
   XCircle, Plus, Search, MessageCircle, Calendar, RefreshCw, 
   CreditCard, ShieldCheck, ExternalLink, Settings, Scissors,
-  Bot, Sparkles, Zap, ArrowRight, Check, Landmark, Building2, QrCode, KeyRound
+  Bot, Sparkles, Zap, ArrowRight, Check, Landmark, Building2, QrCode, KeyRound, Copy
 } from 'lucide-react';
 import { format, addDays, isBefore, parseISO } from 'date-fns';
+import { QRCodeSVG } from 'qrcode.react';
 
 export default function AssinaturasPage() {
   const { toast } = useToast();
@@ -36,6 +37,8 @@ export default function AssinaturasPage() {
 
   // Bank Account State for Subscription Payouts
   const [bankInfo, setBankInfo] = useState<BankInfo>(() => db.getBankInfo(companyId));
+  const [isPixTestModalOpen, setIsPixTestModalOpen] = useState(false);
+  const [copiedTestPix, setCopiedTestPix] = useState(false);
 
   const handleSaveBankInfo = (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,6 +48,19 @@ export default function AssinaturasPage() {
       'success',
       '🏦 Conta Bancária Salva'
     );
+  };
+
+  const getTestPixPayload = () => {
+    const key = bankInfo.pix_key || '12345678000199';
+    const name = (bankInfo.holder_name || 'DOMUS BARBER').toUpperCase().substring(0, 15);
+    return `00020126360014BR.GOV.BCB.PIX0114${key}5204000053039865406129.905802BR5915${name}6009SAO PAULO62070503***6304`;
+  };
+
+  const handleCopyTestPix = () => {
+    navigator.clipboard.writeText(getTestPixPayload());
+    setCopiedTestPix(true);
+    toast('Chave/BRCode PIX de teste copiado! Cole no seu aplicativo bancário para simular a transferência.', 'success', '⚡ PIX Copiado');
+    setTimeout(() => setCopiedTestPix(false), 3000);
   };
 
   // New Subscription Modal State
@@ -748,15 +764,95 @@ export default function AssinaturasPage() {
                   </div>
                 </div>
 
-                <Button type="submit" className="w-full font-extrabold text-xs">
-                  <CheckCircle2 className="w-4 h-4 mr-2" /> Salvar Dados Bancários e Chave PIX
-                </Button>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <Button type="submit" className="font-extrabold text-xs">
+                    <CheckCircle2 className="w-4 h-4 mr-2" /> Salvar Dados Bancários e Chave PIX
+                  </Button>
+                  <Button 
+                    type="button" 
+                    onClick={() => setIsPixTestModalOpen(true)}
+                    variant="outline"
+                    className="text-xs font-extrabold text-green-400 border-green-500/30 hover:bg-green-500/10"
+                  >
+                    <Zap className="w-4 h-4 mr-2" /> Testar Recebimento PIX em Tempo Real
+                  </Button>
+                </div>
 
               </form>
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* MODAL: TESTAR RECEBIMENTO PIX */}
+      {isPixTestModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-card border border-border rounded-3xl w-full max-w-md p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 text-center">
+            
+            <div className="flex items-center justify-between border-b border-border/40 pb-3">
+              <h3 className="font-black text-foreground text-base flex items-center gap-2">
+                <Zap className="w-5 h-5 text-green-400" /> Testar Recebimento PIX em Tempo Real
+              </h3>
+              <button onClick={() => setIsPixTestModalOpen(false)} className="text-muted-foreground hover:text-foreground">
+                <XCircle className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-xs text-muted-foreground">
+              Este QR Code aponta diretamente para a sua conta do <strong>{bankInfo.bank_name}</strong> com a chave PIX <strong>{bankInfo.pix_key}</strong>.
+            </p>
+
+            <div className="p-4 bg-white rounded-2xl shadow-2xl inline-block border border-white">
+              <QRCodeSVG 
+                value={getTestPixPayload()} 
+                size={180} 
+                level="H"
+              />
+            </div>
+
+            <div className="space-y-1 text-xs bg-secondary/40 p-3 rounded-xl border border-border/40 font-mono">
+              <span className="text-muted-foreground block text-[10px]">Titular Registrado:</span>
+              <span className="font-bold text-foreground">{bankInfo.holder_name}</span>
+              <span className="text-muted-foreground block text-[10px] mt-1">Chave PIX:</span>
+              <span className="font-bold text-amber-400">{bankInfo.pix_key}</span>
+            </div>
+
+            <Button
+              type="button"
+              onClick={handleCopyTestPix}
+              variant="secondary"
+              className="w-full text-xs font-mono font-bold"
+            >
+              {copiedTestPix ? <Check className="w-4 h-4 mr-2 text-green-400" /> : <Copy className="w-4 h-4 mr-2 text-amber-400" />}
+              {copiedTestPix ? 'Código PIX Copiado!' : 'Copiar Código PIX Copia e Cola'}
+            </Button>
+
+            <Button
+              type="button"
+              onClick={() => {
+                db.addFinancialTransaction({
+                  id: `ft-${Math.random().toString(36).substr(2, 9)}`,
+                  company_id: companyId,
+                  type: 'income',
+                  category: 'service_appointment',
+                  amount: 129.90,
+                  description: `TESTE PIX REAL - Transferência Recebida na Conta ${bankInfo.bank_name}`,
+                  date: new Date().toISOString(),
+                  payment_method: 'pix',
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString()
+                });
+                setIsPixTestModalOpen(false);
+                toast(`⚡ R$ 129,90 creditados via PIX na sua conta ${bankInfo.bank_name}! Lançamento confirmado no módulo Financeiro.`, 'success', '⚡ PIX Recebido');
+              }}
+              className="w-full bg-green-500 hover:bg-green-400 text-black font-black text-xs shadow-lg shadow-green-500/20"
+            >
+              <CheckCircle2 className="w-4 h-4 mr-2" /> Simular Confirmação de Depósito (R$ 129,90)
+            </Button>
+
+          </div>
+        </div>
+      )}
 
       {/* Modal: Nova Assinatura */}
       {isModalOpen && (

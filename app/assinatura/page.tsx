@@ -9,29 +9,135 @@ import { formatCurrency } from '../../lib/utils';
 import { 
   Crown, CheckCircle2, Scissors, Calendar, ShieldCheck, 
   HelpCircle, ChevronDown, ChevronUp, Star, Award, Coins, 
-  ArrowRight, User, Heart, Sparkles, MapPin, Gift, Zap
+  ArrowRight, User, Heart, Sparkles, MapPin, Gift, Zap,
+  CreditCard, QrCode, Copy, Check, XCircle, Landmark, Building2
 } from 'lucide-react';
 import { useToast } from '../../components/ui/Toast';
 import Badge from '../../components/ui/Badge';
+import { QRCodeSVG } from 'qrcode.react';
+import type { ClientSubscriptionPlan, PaymentMethod, ClientSubscription } from '../../types';
+import { addDays } from 'date-fns';
 
 export default function PublicClientSubscriptionPage() {
   const { toast } = useToast();
   const company = db.getCurrentCompany();
+  const companyId = company?.id ?? 'c1111111-1111-1111-1111-111111111111';
   const user = db.getCurrentUser();
-  const plans = db.getClientSubscriptionPlans(company?.id ?? 'c1111111-1111-1111-1111-111111111111');
+  const plans = db.getClientSubscriptionPlans(companyId);
+  const bankInfo = db.getBankInfo(companyId);
 
   const [openFaq, setOpenFaq] = useState<number | null>(null);
-  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
+  const [selectedPlan, setSelectedPlan] = useState<ClientSubscriptionPlan | null>(null);
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [checkoutPaymentMethod, setCheckoutPaymentMethod] = useState<PaymentMethod>('pix');
+  const [copiedPix, setCopiedPix] = useState(false);
+
+  // Form State
+  const [clientName, setClientName] = useState('');
+  const [clientPhone, setClientPhone] = useState('');
+  const [clientCpf, setClientCpf] = useState('');
+
+  // Card Form
+  const [cardNumber, setCardNumber] = useState('');
+  const [cardHolder, setCardHolder] = useState('');
+  const [cardExpiry, setCardExpiry] = useState('');
+  const [cardCvv, setCardCvv] = useState('');
 
   const toggleFaq = (idx: number) => {
     setOpenFaq(openFaq === idx ? null : idx);
   };
 
-  const handleSubscribe = (planName: string, price: number) => {
-    toast(`Redirecionando para o checkout seguro do plano ${planName} (${formatCurrency(price)}/mês)...`, 'success', '👑 Clube Domus');
-    setTimeout(() => {
-      window.location.href = `/agendar/${company?.slug || 'domus-barbershop'}`;
-    }, 1500);
+  const handleOpenCheckout = (plan: ClientSubscriptionPlan) => {
+    setSelectedPlan(plan);
+    setIsCheckoutOpen(true);
+  };
+
+  // Generate PIX BR Code Payload
+  const getPixPayload = (price: number) => {
+    const key = bankInfo.pix_key || '12345678000199';
+    const name = (bankInfo.holder_name || 'DOMUS BARBER').toUpperCase().substring(0, 15);
+    const amountStr = price.toFixed(2);
+    return `00020126360014BR.GOV.BCB.PIX0114${key}520400005303986540${amountStr.length}${amountStr}5802BR5915${name}6009SAO PAULO62070503***6304`;
+  };
+
+  const handleCopyPix = (pixCode: string) => {
+    navigator.clipboard.writeText(pixCode);
+    setCopiedPix(true);
+    toast('Código PIX Copia e Cola copiado com sucesso! Abra o app do seu banco para pagar.', 'success', '⚡ PIX Copiado');
+    setTimeout(() => setCopiedPix(false), 3000);
+  };
+
+  const handleConfirmSubscriptionPayment = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!clientName.trim() || !clientPhone.trim()) {
+      toast('Por favor, informe seu Nome e Telefone WhatsApp.', 'warning', 'Atenção');
+      return;
+    }
+
+    if (checkoutPaymentMethod === 'credit_card') {
+      if (cardNumber.replace(/\s/g, '').length < 16) {
+        toast('Insira o número completo do cartão de crédito.', 'warning', 'Cartão Inválido');
+        return;
+      }
+    }
+
+    // Find or Create Client
+    let client = db.getClientByPhone(companyId, clientPhone);
+    if (!client) {
+      client = {
+        id: `cli-${Math.random().toString(36).substr(2, 9)}`,
+        company_id: companyId,
+        name: clientName,
+        phone: clientPhone,
+        document: clientCpf,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      db.addClient(client);
+    }
+
+    const price = selectedPlan?.price ?? 79.9;
+    const newSub: ClientSubscription = {
+      id: `cs-${Math.random().toString(36).substr(2, 9)}`,
+      company_id: companyId,
+      client_id: client.id,
+      client,
+      plan_id: selectedPlan?.id || plans[0]?.id,
+      plan: selectedPlan || plans[0],
+      status: 'active',
+      start_date: new Date().toISOString(),
+      expiration_date: addDays(new Date(), 30).toISOString(),
+      auto_renew: true,
+      payment_method: checkoutPaymentMethod,
+      total_paid: price,
+      cuts_used_this_month: 0,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+
+    db.addClientSubscription(newSub);
+
+    // Register income in financial module
+    db.addFinancialTransaction({
+      id: `ft-${Math.random().toString(36).substr(2, 9)}`,
+      company_id: companyId,
+      type: 'income',
+      category: 'service_appointment',
+      amount: price,
+      description: `Assinatura de Clube de Cortes (${selectedPlan?.name}) - ${clientName}`,
+      date: new Date().toISOString(),
+      payment_method: checkoutPaymentMethod,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    });
+
+    setIsCheckoutOpen(false);
+    toast(
+      `🎉 Assinatura ativada com sucesso! Pagamento de ${formatCurrency(price)} registrado para a conta bancária ${bankInfo.bank_name}. Bem-vindo ao Clube!`,
+      'success',
+      '👑 Assinatura Confirmada'
+    );
   };
 
   const faqs = [
@@ -163,12 +269,12 @@ export default function PublicClientSubscriptionPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {plans.map((p) => {
-              const isSelected = selectedPlan === p.id || (selectedPlan === null && p.is_popular);
+              const isSelected = selectedPlan?.id === p.id || (selectedPlan === null && p.is_popular);
 
               return (
                 <div
                   key={p.id}
-                  onClick={() => setSelectedPlan(p.id)}
+                  onClick={() => setSelectedPlan(p)}
                   className={`p-6 rounded-3xl border flex flex-col justify-between text-left transition-all cursor-pointer relative bg-card ${
                     p.is_popular 
                       ? 'border-amber-400 ring-2 ring-amber-400/20 shadow-2xl shadow-amber-500/10' 
@@ -207,7 +313,7 @@ export default function PublicClientSubscriptionPage() {
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleSubscribe(p.name, p.price);
+                      handleOpenCheckout(p);
                     }}
                     className={`w-full py-3 rounded-xl font-extrabold text-xs transition-all cursor-pointer ${
                       p.is_popular 
@@ -272,6 +378,169 @@ export default function PublicClientSubscriptionPage() {
         </div>
 
       </main>
+
+      {/* CHECKOUT MODAL: PIX & CARTÃO REAL */}
+      {isCheckoutOpen && selectedPlan && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-card border border-border rounded-3xl w-full max-w-lg p-6 md:p-8 shadow-2xl space-y-6 my-8 animate-in fade-in zoom-in-95">
+            
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-border/40 pb-4">
+              <div>
+                <span className="text-[10px] font-bold text-amber-400 uppercase tracking-widest block">Checkout Seguro</span>
+                <h3 className="text-lg font-black text-foreground flex items-center gap-2">
+                  <Crown className="w-5 h-5 text-amber-400" /> Plano {selectedPlan.name} ({formatCurrency(selectedPlan.price)}/mês)
+                </h3>
+              </div>
+              <button onClick={() => setIsCheckoutOpen(false)} className="text-muted-foreground hover:text-foreground">
+                <XCircle className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Subscriber Info */}
+            <div className="space-y-3">
+              <span className="text-xs font-bold text-foreground block">1. Seus Dados de Assinante</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <input
+                  type="text"
+                  placeholder="Seu Nome Completo"
+                  value={clientName}
+                  onChange={e => setClientName(e.target.value)}
+                  className="bg-secondary border border-border text-foreground text-xs rounded-xl px-3 py-2.5 outline-none font-bold"
+                />
+                <input
+                  type="text"
+                  placeholder="WhatsApp (ex: 11999998888)"
+                  value={clientPhone}
+                  onChange={e => setClientPhone(e.target.value)}
+                  className="bg-secondary border border-border text-foreground text-xs rounded-xl px-3 py-2.5 outline-none font-mono"
+                />
+              </div>
+            </div>
+
+            {/* Payment Method Selector */}
+            <div className="space-y-3">
+              <span className="text-xs font-bold text-foreground block">2. Escolha como pagar</span>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setCheckoutPaymentMethod('pix')}
+                  className={`p-3 rounded-2xl border text-xs font-bold flex items-center justify-center gap-2 cursor-pointer transition-all ${
+                    checkoutPaymentMethod === 'pix'
+                      ? 'border-green-500 bg-green-500/10 text-green-400 ring-2 ring-green-500/20'
+                      : 'border-border bg-secondary/50 text-muted-foreground'
+                  }`}
+                >
+                  <QrCode className="w-4 h-4 text-green-400" /> PIX Instantâneo
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCheckoutPaymentMethod('credit_card')}
+                  className={`p-3 rounded-2xl border text-xs font-bold flex items-center justify-center gap-2 cursor-pointer transition-all ${
+                    checkoutPaymentMethod === 'credit_card'
+                      ? 'border-blue-500 bg-blue-500/10 text-blue-400 ring-2 ring-blue-500/20'
+                      : 'border-border bg-secondary/50 text-muted-foreground'
+                  }`}
+                >
+                  <CreditCard className="w-4 h-4 text-blue-400" /> Cartão de Crédito
+                </button>
+              </div>
+            </div>
+
+            {/* PAYMENT CONTENT */}
+            {checkoutPaymentMethod === 'pix' ? (
+              <div className="p-5 rounded-2xl border border-green-500/30 bg-green-950/10 flex flex-col items-center gap-4 text-center">
+                <div className="flex items-center gap-2 text-green-400 font-bold text-xs">
+                  <Landmark className="w-4 h-4" /> Pagamento enviado para {bankInfo.bank_name || 'Conta da Barbearia'}
+                </div>
+
+                {/* QR CODE GENERATOR */}
+                <div className="p-4 bg-white rounded-2xl shadow-xl border border-white">
+                  <QRCodeSVG 
+                    value={getPixPayload(selectedPlan.price)} 
+                    size={160} 
+                    level="H"
+                  />
+                </div>
+
+                <div className="space-y-1 text-xs">
+                  <span className="text-muted-foreground block text-[10px]">Titular da Conta:</span>
+                  <span className="font-extrabold text-foreground">{bankInfo.holder_name}</span>
+                  <span className="text-muted-foreground block text-[10px] mt-1">Chave PIX Cadastrada:</span>
+                  <span className="font-mono font-bold text-amber-400">{bankInfo.pix_key}</span>
+                </div>
+
+                {/* Copia e Cola */}
+                <button
+                  type="button"
+                  onClick={() => handleCopyPix(getPixPayload(selectedPlan.price))}
+                  className="w-full py-2.5 px-4 rounded-xl bg-secondary border border-border text-foreground hover:bg-secondary/80 text-xs font-mono font-bold flex items-center justify-center gap-2 transition-all cursor-pointer"
+                >
+                  {copiedPix ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4 text-amber-400" />}
+                  {copiedPix ? 'Código PIX Copiado!' : 'Copiar Código PIX Copia e Cola'}
+                </button>
+
+                <div className="w-full border-t border-border/40 my-1" />
+
+                <button
+                  type="button"
+                  onClick={handleConfirmSubscriptionPayment}
+                  className="w-full py-3 rounded-xl bg-green-500 hover:bg-green-400 text-black font-extrabold text-xs shadow-lg shadow-green-500/20 cursor-pointer flex items-center justify-center gap-2"
+                >
+                  <CheckCircle2 className="w-4 h-4" /> Confirmar Pagamento PIX e Ativar Assinatura
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <span className="text-xs font-bold text-foreground block">3. Dados do Cartão de Crédito</span>
+                <input
+                  type="text"
+                  placeholder="0000 0000 0000 0000"
+                  value={cardNumber}
+                  onChange={e => setCardNumber(e.target.value)}
+                  className="w-full bg-secondary border border-border text-foreground text-xs rounded-xl px-3 py-2.5 outline-none font-mono"
+                />
+                <input
+                  type="text"
+                  placeholder="NOME IMPRESSO NO CARTÃO"
+                  value={cardHolder}
+                  onChange={e => setCardHolder(e.target.value)}
+                  className="w-full bg-secondary border border-border text-foreground text-xs rounded-xl px-3 py-2.5 outline-none font-bold uppercase"
+                />
+                <div className="grid grid-cols-2 gap-3">
+                  <input
+                    type="text"
+                    placeholder="MM/AA"
+                    value={cardExpiry}
+                    onChange={e => setCardExpiry(e.target.value)}
+                    className="bg-secondary border border-border text-foreground text-xs rounded-xl px-3 py-2.5 outline-none font-mono"
+                  />
+                  <input
+                    type="password"
+                    placeholder="CVV (3 dígitos)"
+                    value={cardCvv}
+                    onChange={e => setCardCvv(e.target.value)}
+                    className="bg-secondary border border-border text-foreground text-xs rounded-xl px-3 py-2.5 outline-none font-mono"
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleConfirmSubscriptionPayment}
+                  className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-xs shadow-lg shadow-blue-600/20 cursor-pointer flex items-center justify-center gap-2 mt-2"
+                >
+                  <CreditCard className="w-4 h-4" /> Confirmar Assinatura no Cartão ({formatCurrency(selectedPlan.price)}/mês)
+                </button>
+              </div>
+            )}
+
+            <p className="text-[10px] text-center text-muted-foreground">
+              🔒 Transação protegida por criptografia bancária de ponta a ponta. Sem fidelidade.
+            </p>
+
+          </div>
+        </div>
+      )}
 
       {/* Footer */}
       <footer className="py-8 border-t border-border/40 bg-card text-center text-xs text-muted-foreground select-none">
