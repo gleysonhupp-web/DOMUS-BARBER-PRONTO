@@ -196,3 +196,82 @@ export interface AuditLog {
   created_at: string;
   user?: UserProfile;
 }
+
+// ─── Client Subscriptions (Clube de Assinatura da Barbearia) ─────────
+export type ClientSubscriptionStatus = 'active' | 'expiring_soon' | 'expired' | 'canceled' | 'pending';
+
+export interface ClientSubscriptionPlan {
+  id: string;
+  company_id: string;
+  name: string;
+  description?: string | null;
+  price: number;
+  cuts_included: 'unlimited' | number;
+  perks: string[];
+  is_popular?: boolean;
+  created_at: string;
+}
+
+export interface ClientSubscription {
+  id: string;
+  company_id: string;
+  client_id: string;
+  plan_id: string;
+  status: ClientSubscriptionStatus;
+  start_date: string;
+  expiration_date: string;
+  auto_renew: boolean;
+  payment_method: PaymentMethod;
+  total_paid: number;
+  cuts_used_this_month: number;
+  created_at: string;
+  updated_at: string;
+  client?: Client;
+  plan?: ClientSubscriptionPlan;
+}
+
+// ─── Metas & Gamificação (Goals, XP & Rewards) ────────────────────────
+export interface BarberGoal {
+  id: string;
+  company_id: string;
+  user_id?: string | null;
+  level: number;
+  level_title: string;
+  xp: number;
+  next_level_xp: number;
+  coins: number;
+  monthly_revenue_target: number;
+  monthly_revenue_current: number;
+  monthly_cuts_target: number;
+  monthly_cuts_current: number;
+  monthly_products_target: number;
+  monthly_products_current: number;
+  monthly_reviews_target: number;
+  monthly_reviews_current: number;
+  ranking_position: number;
+  streak_days: number;
+  domus_index: number;
+}
+
+export interface DailyMission {
+  id: string;
+  company_id: string;
+  title: string;
+  current: number;
+  target: number;
+  xp_reward: number;
+  completed: boolean;
+  icon: string;
+}
+
+export interface RewardItem {
+  id: string;
+  company_id: string;
+  title: string;
+  coins_cost: number;
+  category: 'money' | 'equipment' | 'course' | 'ticket';
+  badge?: string;
+  image_url?: string;
+  available: boolean;
+}
+

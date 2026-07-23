@@ -4,7 +4,8 @@
 import { 
   Company, UserProfile, CompanyMember, Service, Professional, 
   Client, Appointment, Product, StockMovement, FinancialTransaction, 
-  WhatsAppConnection, AIConversation, SubscriptionPlan, CompanySubscription, AuditLog 
+  WhatsAppConnection, AIConversation, SubscriptionPlan, CompanySubscription, AuditLog,
+  ClientSubscriptionPlan, ClientSubscription, BarberGoal, DailyMission, RewardItem
 } from '../types';
 import { isMockMode } from '../lib/supabase';
 
@@ -26,6 +27,11 @@ const KEYS = {
   CONVERSATIONS: 'domus_conversations',
   SUBSCRIPTIONS: 'domus_subscriptions',
   AUDIT_LOGS: 'domus_audit_logs',
+  CLIENT_SUBSCRIPTION_PLANS: 'domus_client_sub_plans',
+  CLIENT_SUBSCRIPTIONS: 'domus_client_subscriptions',
+  BARBER_GOALS: 'domus_barber_goals',
+  DAILY_MISSIONS: 'domus_daily_missions',
+  REWARD_ITEMS: 'domus_reward_items',
 };
 
 // Default seed data
@@ -409,6 +415,143 @@ const defaultSubscriptions: CompanySubscription[] = [
   }
 ];
 
+const defaultClientPlans: ClientSubscriptionPlan[] = [
+  {
+    id: 'cp-basic',
+    company_id: DEFAULT_COMPANY_ID,
+    name: 'BÁSICO',
+    description: 'Para quem gosta de praticidade no dia a dia.',
+    price: 79.90,
+    cuts_included: 4,
+    perks: ['4 cortes por mês', 'Válido em barbeiros parceiros', 'Agendamento prioritário', 'Suporte no app'],
+    is_popular: false,
+    created_at: new Date().toISOString()
+  },
+  {
+    id: 'cp-pro',
+    company_id: DEFAULT_COMPANY_ID,
+    name: 'PRO',
+    description: 'Para quem não abre mão de estilo sempre.',
+    price: 129.90,
+    cuts_included: 'unlimited',
+    perks: ['Cortes ilimitados no mês', 'Escolha livre de barbeiros', 'Barbearias premium inclusas', '10% OFF em produtos', 'Acúmulo de pontos', 'Remarcação flexível'],
+    is_popular: true,
+    created_at: new Date().toISOString()
+  },
+  {
+    id: 'cp-premium',
+    company_id: DEFAULT_COMPANY_ID,
+    name: 'PREMIUM',
+    description: 'Para quem quer o melhor sem limites.',
+    price: 179.90,
+    cuts_included: 'unlimited',
+    perks: ['Barbearias exclusivas', '15% OFF em produtos', 'Convites para eventos', 'Transferência de plano', '1 corte brinde por mês'],
+    is_popular: false,
+    created_at: new Date().toISOString()
+  }
+];
+
+const defaultClientSubscriptions: ClientSubscription[] = [
+  {
+    id: 'cs-1',
+    company_id: DEFAULT_COMPANY_ID,
+    client_id: 'c1', // Rodrigo Oliveira
+    plan_id: 'cp-pro',
+    status: 'active',
+    start_date: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
+    expiration_date: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString(),
+    auto_renew: true,
+    payment_method: 'credit_card',
+    total_paid: 129.90,
+    cuts_used_this_month: 3,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  },
+  {
+    id: 'cs-2',
+    company_id: DEFAULT_COMPANY_ID,
+    client_id: 'c2', // Felipe Melo
+    plan_id: 'cp-premium',
+    status: 'expiring_soon',
+    start_date: new Date(Date.now() - 27 * 24 * 60 * 60 * 1000).toISOString(),
+    expiration_date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(), // Vence em 3 dias
+    auto_renew: false,
+    payment_method: 'pix',
+    total_paid: 179.90,
+    cuts_used_this_month: 5,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  },
+  {
+    id: 'cs-3',
+    company_id: DEFAULT_COMPANY_ID,
+    client_id: 'c3', // Marcelo Vieira
+    plan_id: 'cp-basic',
+    status: 'expired',
+    start_date: new Date(Date.now() - 40 * 24 * 60 * 60 * 1000).toISOString(),
+    expiration_date: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(), // Venceu há 10 dias
+    auto_renew: false,
+    payment_method: 'cash',
+    total_paid: 79.90,
+    cuts_used_this_month: 4,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  },
+  {
+    id: 'cs-4',
+    company_id: DEFAULT_COMPANY_ID,
+    client_id: 'c4', // Bruno Henrique
+    plan_id: 'cp-pro',
+    status: 'active',
+    start_date: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
+    expiration_date: new Date(Date.now() + 20 * 24 * 60 * 60 * 1000).toISOString(),
+    auto_renew: true,
+    payment_method: 'pix',
+    total_paid: 129.90,
+    cuts_used_this_month: 2,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  }
+];
+
+const defaultBarberGoal: BarberGoal = {
+  id: 'bg-1',
+  company_id: DEFAULT_COMPANY_ID,
+  user_id: DEFAULT_USER_ID,
+  level: 18,
+  level_title: 'Master Barber',
+  xp: 8450,
+  next_level_xp: 10000,
+  coins: 2450,
+  monthly_revenue_target: 12000,
+  monthly_revenue_current: 8730,
+  monthly_cuts_target: 100,
+  monthly_cuts_current: 87,
+  monthly_products_target: 2000,
+  monthly_products_current: 1300,
+  monthly_reviews_target: 40,
+  monthly_reviews_current: 32,
+  ranking_position: 2,
+  streak_days: 15,
+  domus_index: 865
+};
+
+const defaultDailyMissions: DailyMission[] = [
+  { id: 'dm-1', company_id: DEFAULT_COMPANY_ID, title: 'Fazer 8 cortes', current: 6, target: 8, xp_reward: 100, completed: false, icon: 'scissors' },
+  { id: 'dm-2', company_id: DEFAULT_COMPANY_ID, title: 'Vender 2 produtos', current: 1, target: 2, xp_reward: 50, completed: false, icon: 'package' },
+  { id: 'dm-3', company_id: DEFAULT_COMPANY_ID, title: 'Conseguir 1 avaliação 5 estrelas', current: 0, target: 1, xp_reward: 80, completed: false, icon: 'star' },
+  { id: 'dm-4', company_id: DEFAULT_COMPANY_ID, title: 'Reagendar 3 clientes', current: 2, target: 3, xp_reward: 120, completed: false, icon: 'calendar' }
+];
+
+const defaultRewardItems: RewardItem[] = [
+  { id: 'rw-1', company_id: DEFAULT_COMPANY_ID, title: 'Dinheiro na conta R$ 100,00', coins_cost: 10000, category: 'money', available: true, badge: 'Mais Resgatado' },
+  { id: 'rw-2', company_id: DEFAULT_COMPANY_ID, title: 'Dinheiro na conta R$ 250,00', coins_cost: 20000, category: 'money', available: true },
+  { id: 'rw-3', company_id: DEFAULT_COMPANY_ID, title: 'Dinheiro na conta R$ 500,00', coins_cost: 35000, category: 'money', available: true },
+  { id: 'rw-4', company_id: DEFAULT_COMPANY_ID, title: 'Máquina Profissional Wahl', coins_cost: 25000, category: 'equipment', available: true },
+  { id: 'rw-5', company_id: DEFAULT_COMPANY_ID, title: 'Curso Degradê Perfeito', coins_cost: 15000, category: 'course', available: true },
+  { id: 'rw-6', company_id: DEFAULT_COMPANY_ID, title: 'Ingresso Evento Barber Club 2026', coins_cost: 12000, category: 'ticket', available: true }
+];
+
 // Helper to fetch data safely from LocalStorage (browser check)
 function get<T>(key: string, defaultValue: T): T {
   if (typeof window === 'undefined') return defaultValue;
@@ -758,6 +901,87 @@ export const db = {
 
   getAllFinancialsRaw: (): FinancialTransaction[] => {
     return get<FinancialTransaction[]>(KEYS.FINANCIALS, defaultFinancials);
+  },
+
+  // ─── Client Subscriptions Methods ──────────────────────────────
+  getClientSubscriptionPlans: (companyId: string): ClientSubscriptionPlan[] => {
+    const list = get<ClientSubscriptionPlan[]>(KEYS.CLIENT_SUBSCRIPTION_PLANS, defaultClientPlans);
+    const filtered = list.filter(item => item.company_id === companyId);
+    if (filtered.length > 0) return filtered;
+    return defaultClientPlans.map(p => ({ ...p, company_id: companyId }));
+  },
+
+  saveClientSubscriptionPlans: (items: ClientSubscriptionPlan[]) => set(KEYS.CLIENT_SUBSCRIPTION_PLANS, items),
+
+  getClientSubscriptions: (companyId: string): ClientSubscription[] => {
+    const list = get<ClientSubscription[]>(KEYS.CLIENT_SUBSCRIPTIONS, defaultClientSubscriptions);
+    const clients = get<Client[]>(KEYS.CLIENTS, defaultClients);
+    const plans = get<ClientSubscriptionPlan[]>(KEYS.CLIENT_SUBSCRIPTION_PLANS, defaultClientPlans);
+
+    return list
+      .filter(item => item.company_id === companyId)
+      .map(sub => ({
+        ...sub,
+        client: clients.find(c => c.id === sub.client_id),
+        plan: plans.find(p => p.id === sub.plan_id)
+      }));
+  },
+
+  saveClientSubscriptions: (items: ClientSubscription[]) => set(KEYS.CLIENT_SUBSCRIPTIONS, items),
+
+  addClientSubscription: (sub: ClientSubscription): ClientSubscription => {
+    const list = get<ClientSubscription[]>(KEYS.CLIENT_SUBSCRIPTIONS, defaultClientSubscriptions);
+    list.push(sub);
+    set(KEYS.CLIENT_SUBSCRIPTIONS, list);
+    return sub;
+  },
+
+  updateClientSubscription: (sub: ClientSubscription): void => {
+    const list = get<ClientSubscription[]>(KEYS.CLIENT_SUBSCRIPTIONS, defaultClientSubscriptions);
+    const idx = list.findIndex(item => item.id === sub.id);
+    if (idx !== -1) {
+      list[idx] = sub;
+      set(KEYS.CLIENT_SUBSCRIPTIONS, list);
+    }
+  },
+
+  // ─── Metas & Gamificação Methods ───────────────────────────────
+  getBarberGoal: (companyId: string): BarberGoal => {
+    const goal = get<BarberGoal>(`domus_goal_${companyId}`, { ...defaultBarberGoal, company_id: companyId });
+    return goal;
+  },
+
+  saveBarberGoal: (goal: BarberGoal) => {
+    set(`domus_goal_${goal.company_id}`, goal);
+  },
+
+  getDailyMissions: (companyId: string): DailyMission[] => {
+    const list = get<DailyMission[]>(KEYS.DAILY_MISSIONS, defaultDailyMissions);
+    const filtered = list.filter(m => m.company_id === companyId);
+    if (filtered.length > 0) return filtered;
+    return defaultDailyMissions.map(m => ({ ...m, company_id: companyId }));
+  },
+
+  toggleDailyMission: (companyId: string, missionId: string): DailyMission[] => {
+    const list = get<DailyMission[]>(KEYS.DAILY_MISSIONS, defaultDailyMissions);
+    const idx = list.findIndex(m => m.id === missionId);
+    if (idx !== -1) {
+      list[idx].completed = !list[idx].completed;
+      if (list[idx].completed) {
+        list[idx].current = list[idx].target;
+      } else {
+        list[idx].current = Math.max(0, list[idx].target - 2);
+      }
+      set(KEYS.DAILY_MISSIONS, list);
+    }
+    return list.filter(m => m.company_id === companyId);
+  },
+
+  getRewardItems: (companyId: string): RewardItem[] => {
+    const list = get<RewardItem[]>(KEYS.REWARD_ITEMS, defaultRewardItems);
+    const filtered = list.filter(r => r.company_id === companyId);
+    if (filtered.length > 0) return filtered;
+    return defaultRewardItems.map(r => ({ ...r, company_id: companyId }));
   }
 };
 

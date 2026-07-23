@@ -9,7 +9,7 @@ import { cn } from '../../lib/utils';
 import { 
   LayoutDashboard, Calendar, Users, Scissors, UserCheck, 
   DollarSign, Package, MessageSquareCode, Brain, Settings, 
-  ChevronLeft, ChevronRight, LogOut, ScissorsLineDashed, Link2, Crown
+  ChevronLeft, ChevronRight, LogOut, ScissorsLineDashed, Link2, Crown, Target, Award
 } from 'lucide-react';
 import { authService } from '../../services/auth';
 import { db } from '../../services/db';
@@ -29,6 +29,8 @@ export const Sidebar = ({ className }: SidebarProps) => {
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { name: 'Agenda', href: '/agenda', icon: Calendar },
     { name: 'Clientes', href: '/clientes', icon: Users },
+    { name: 'Metas & XP', href: '/metas', icon: Target },
+    { name: 'Assinaturas Clube', href: '/assinaturas', icon: Crown },
     { name: 'Serviços', href: '/servicos', icon: Scissors },
     { name: 'Profissionais', href: '/profissionais', icon: UserCheck },
     { name: 'Financeiro', href: '/financeiro', icon: DollarSign },
