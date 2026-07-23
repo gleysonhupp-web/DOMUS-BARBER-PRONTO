@@ -39,6 +39,38 @@ export default function AssinaturasPage() {
   const [selectedPlanId, setSelectedPlanId] = useState(plans[0]?.id || '');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('credit_card');
 
+  // Credit Card Form State
+  const [cardNumber, setCardNumber] = useState('');
+  const [cardHolder, setCardHolder] = useState('');
+  const [cardExpiry, setCardExpiry] = useState('');
+  const [cardCvv, setCardCvv] = useState('');
+  const [cardCpf, setCardCpf] = useState('');
+
+  // Card Formatters
+  const handleCardNumberChange = (val: string) => {
+    const digits = val.replace(/\D/g, '').slice(0, 16);
+    const formatted = digits.replace(/(\d{4})(?=\d)/g, '$1 ');
+    setCardNumber(formatted);
+  };
+
+  const handleCardExpiryChange = (val: string) => {
+    const digits = val.replace(/\D/g, '').slice(0, 4);
+    if (digits.length <= 2) {
+      setCardExpiry(digits);
+    } else {
+      setCardExpiry(`${digits.slice(0, 2)}/${digits.slice(2)}`);
+    }
+  };
+
+  const handleCpfChange = (val: string) => {
+    const digits = val.replace(/\D/g, '').slice(0, 11);
+    const formatted = digits
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+    setCardCpf(formatted);
+  };
+
   // Metrics
   const activeSubs = subscriptions.filter(s => s.status === 'active' || s.status === 'expiring_soon');
   const mrr = activeSubs.reduce((acc, s) => acc + (s.plan?.price ?? 0), 0);
@@ -100,6 +132,26 @@ export default function AssinaturasPage() {
       return;
     }
 
+    if (paymentMethod === 'credit_card') {
+      const rawCard = cardNumber.replace(/\s/g, '');
+      if (rawCard.length < 16) {
+        toast('Insira o número completo do cartão de crédito (16 dígitos).', 'warning', 'Cartão Inválido');
+        return;
+      }
+      if (!cardHolder.trim()) {
+        toast('Insira o nome impresso no cartão de crédito.', 'warning', 'Nome no Cartão');
+        return;
+      }
+      if (cardExpiry.length < 5) {
+        toast('Insira a data de validade (MM/AA).', 'warning', 'Validade Inválida');
+        return;
+      }
+      if (cardCvv.length < 3) {
+        toast('Insira o código de segurança (CVV).', 'warning', 'CVV Inválido');
+        return;
+      }
+    }
+
     const plan = plans.find(p => p.id === selectedPlanId);
     const newSub: ClientSubscription = {
       id: `cs-${Math.random().toString(36).substr(2, 9)}`,
@@ -120,7 +172,15 @@ export default function AssinaturasPage() {
     db.addClientSubscription(newSub);
     setSubscriptions(db.getClientSubscriptions(companyId));
     setIsModalOpen(false);
-    toast('Nova assinatura ativada com sucesso!', 'success', '👑 Clube de Assinatura');
+
+    const lastDigits = cardNumber ? cardNumber.slice(-4) : '****';
+    toast(
+      paymentMethod === 'credit_card'
+        ? `Cobrança de ${formatCurrency(plan?.price ?? 0)}/mês cadastrada no Cartão final ${lastDigits} com sucesso!`
+        : 'Nova assinatura ativada com sucesso!',
+      'success',
+      '💳 Assinatura & Cartão Cadastrados'
+    );
   };
 
   // Filter subscriptions list
@@ -420,8 +480,88 @@ export default function AssinaturasPage() {
                 </select>
               </div>
 
+              {/* Credit Card Input Fields Section */}
+              {paymentMethod === 'credit_card' && (
+                <div className="p-4 rounded-2xl bg-secondary/30 border border-amber-500/30 space-y-3 animate-in fade-in zoom-in-95">
+                  <div className="flex items-center justify-between border-b border-border/40 pb-2">
+                    <span className="text-xs font-bold text-amber-400 flex items-center gap-1.5">
+                      <CreditCard className="w-4 h-4" /> Dados do Cartão de Crédito
+                    </span>
+                    <span className="text-[10px] text-muted-foreground font-mono">Cobrança Recorrente</span>
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-semibold text-muted-foreground block mb-1">Número do Cartão de Crédito</label>
+                    <div className="relative">
+                      <Input
+                        type="text"
+                        placeholder="0000 0000 0000 0000"
+                        value={cardNumber}
+                        onChange={e => handleCardNumberChange(e.target.value)}
+                        className="font-mono text-xs pr-10"
+                        maxLength={19}
+                      />
+                      <CreditCard className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-amber-400 pointer-events-none" />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-semibold text-muted-foreground block mb-1">Nome Impresso no Cartão</label>
+                    <Input
+                      type="text"
+                      placeholder="EX: RODRIGO O OLIVEIRA"
+                      value={cardHolder}
+                      onChange={e => setCardHolder(e.target.value.toUpperCase())}
+                      className="text-xs uppercase"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[11px] font-semibold text-muted-foreground block mb-1">Validade (MM/AA)</label>
+                      <Input
+                        type="text"
+                        placeholder="12/28"
+                        value={cardExpiry}
+                        onChange={e => handleCardExpiryChange(e.target.value)}
+                        className="font-mono text-xs text-center"
+                        maxLength={5}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[11px] font-semibold text-muted-foreground block mb-1">Código (CVV)</label>
+                      <Input
+                        type="text"
+                        placeholder="123"
+                        value={cardCvv}
+                        onChange={e => setCardCvv(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                        className="font-mono text-xs text-center"
+                        maxLength={4}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-semibold text-muted-foreground block mb-1">CPF do Titular do Cartão</label>
+                    <Input
+                      type="text"
+                      placeholder="000.000.000-00"
+                      value={cardCpf}
+                      onChange={e => handleCpfChange(e.target.value)}
+                      className="font-mono text-xs"
+                      maxLength={14}
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-1.5 text-[10px] text-green-400 font-semibold pt-1">
+                    <ShieldCheck className="w-3.5 h-3.5" /> Cobrança recorrente mensal 100% criptografada no gateway.
+                  </div>
+                </div>
+              )}
+
               <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-300 leading-relaxed">
-                ℹ️ A assinatura dará acesso ao cliente por **30 dias consecutivos**. Ele poderá cortar o cabelo mediante apresentação da assinatura no estabelecimento.
+                ℹ️ A assinatura dará acesso ao cliente por **30 dias consecutivos**. O valor será cobrado automaticamente a cada ciclo.
               </div>
 
               <div className="flex gap-3 pt-2">
