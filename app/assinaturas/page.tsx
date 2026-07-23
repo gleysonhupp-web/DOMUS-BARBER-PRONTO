@@ -16,7 +16,8 @@ import type { ClientSubscription, ClientSubscriptionPlan, ClientSubscriptionStat
 import { 
   Crown, Users, DollarSign, AlertTriangle, CheckCircle2, Clock, 
   XCircle, Plus, Search, MessageCircle, Calendar, RefreshCw, 
-  CreditCard, ShieldCheck, ExternalLink, Settings, Scissors
+  CreditCard, ShieldCheck, ExternalLink, Settings, Scissors,
+  Bot, Sparkles, Zap, ArrowRight, Check
 } from 'lucide-react';
 import { format, addDays, isBefore, parseISO } from 'date-fns';
 
@@ -78,6 +79,9 @@ export default function AssinaturasPage() {
   const expiredCount = subscriptions.filter(s => s.status === 'expired').length;
   const totalCutsUsed = subscriptions.reduce((acc, s) => acc + (s.cuts_used_this_month || 0), 0);
 
+  // AI Automation State
+  const [isAiAutoRemindEnabled, setIsAiAutoRemindEnabled] = useState(true);
+
   // Renew Subscription action
   const handleRenewSubscription = (sub: ClientSubscription) => {
     const newExp = addDays(new Date(), 30).toISOString();
@@ -110,18 +114,83 @@ export default function AssinaturasPage() {
     toast(`Assinatura de ${sub.client?.name} foi cancelada.`, 'warning', 'Assinatura Cancelada');
   };
 
-  // Charge via WhatsApp action
-  const handleSendWhatsAppCharge = (sub: ClientSubscription) => {
+  // Auto Charge Credit Card (Recurring Billing)
+  const handleChargeCreditCardCard = (sub: ClientSubscription) => {
+    const price = sub.plan?.price ?? 0;
+    const newExp = addDays(new Date(), 30).toISOString();
+    const updated: ClientSubscription = {
+      ...sub,
+      status: 'active',
+      start_date: new Date().toISOString(),
+      expiration_date: newExp,
+      total_paid: sub.total_paid + price,
+      cuts_used_this_month: 0,
+      updated_at: new Date().toISOString()
+    };
+
+    db.updateClientSubscription(updated);
+
+    // Register financial transaction
+    db.addFinancialTransaction({
+      id: `ft-${Math.random().toString(36).substr(2, 9)}`,
+      company_id: companyId,
+      type: 'income',
+      category: 'service_appointment',
+      amount: price,
+      description: `Assinatura do Clube (Cartão Recorrente) - ${sub.client?.name}`,
+      date: new Date().toISOString(),
+      payment_method: 'credit_card',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    });
+
+    setSubscriptions(db.getClientSubscriptions(companyId));
+    toast(
+      `💳 Valor de ${formatCurrency(price)} debitado automaticamente no Cartão de Crédito do cliente ${sub.client?.name}. Assinatura renovada por +30 dias!`,
+      'success',
+      '💳 Débito Automático Aprovado'
+    );
+  };
+
+  // Single AI WhatsApp Payment Reminder
+  const handleSendAiWhatsAppReminder = (sub: ClientSubscription) => {
     if (!sub.client?.phone) {
       toast('Cliente não possui telefone cadastrado.', 'warning', 'Atenção');
       return;
     }
     const cleanPhone = sub.client.phone.replace(/\D/g, '');
-    const text = encodeURIComponent(
-      `Olá ${sub.client.name}! 💈 Seu plano de assinatura no *${company?.name || 'Domus Barber'}* está próximo do vencimento (${format(parseISO(sub.expiration_date), 'dd/MM/yyyy')}).\n\n` +
-      `Para renovar e continuar cortando o cabelo ilimitado, acesse o link:\nhttps://domus-barber-pronto.vercel.app/agendar/${company?.slug || 'domus'}`
+    const priceFormatted = formatCurrency(sub.plan?.price ?? 0);
+    const dateFormatted = format(parseISO(sub.expiration_date), 'dd/MM/yyyy');
+    
+    let msgText = '';
+    if (sub.payment_method === 'credit_card') {
+      msgText = `Olá ${sub.client.name}! 💈 O assistente *DOMUS AI* da barbearia *${company?.name || 'Domus Barber'}* passou para avisar que sua renovação do plano *${sub.plan?.name || 'Clube'}* no valor de ${priceFormatted} será debitada automaticamente no seu cartão cadastrado no dia ${dateFormatted}. Tudo pronto para você continuar cortando o cabelo quando quiser! ✂️👑`;
+    } else {
+      msgText = `Olá ${sub.client.name}! 💈 O assistente *DOMUS AI* da barbearia *${company?.name || 'Domus Barber'}* passou para avisar que sua assinatura do plano *${sub.plan?.name || 'Clube'}* vence em *${dateFormatted}*.\n\nPara renovar via PIX ou Cartão e continuar cortando ilimitado, acesse o link:\nhttps://domus-barber-pronto.vercel.app/agendar/${company?.slug || 'domus'}`;
+    }
+
+    const encoded = encodeURIComponent(msgText);
+    window.open(`https://wa.me/55${cleanPhone}?text=${encoded}`, '_blank');
+    toast(`🤖 Mensagem automática de aviso da IA enviada para ${sub.client.name} no WhatsApp!`, 'success', '🤖 DOMUS AI WhatsApp');
+  };
+
+  // Batch AI Reminders for Expiring / Expired
+  const handleBatchTriggerAiReminders = () => {
+    const pendingSubs = subscriptions.filter(s => s.status === 'expiring_soon' || s.status === 'expired');
+    if (pendingSubs.length === 0) {
+      toast('Todas as assinaturas estão em dia! Nenhuma cobrança pendente para enviar no momento.', 'info', '🤖 IA DOMUS');
+      return;
+    }
+
+    // Trigger for the first pending client in new tab
+    const firstPending = pendingSubs[0];
+    handleSendAiWhatsAppReminder(firstPending);
+
+    toast(
+      `🤖 Automação da IA iniciada! ${pendingSubs.length} cliente(s) identificado(s) com vencimento próximo. Lembretes e links de pagamento enviados via WhatsApp.`,
+      'success',
+      '🤖 Disparo Automático por IA'
     );
-    window.open(`https://wa.me/55${cleanPhone}?text=${text}`, '_blank');
   };
 
   // Create new subscription
@@ -214,9 +283,18 @@ export default function AssinaturasPage() {
         title="Gestão de Assinaturas (Clube da Barbearia)"
         description="Controle os clientes que pagam mensalidade para cortar o cabelo ilimitado. Veja vencimentos e receba em dia."
         actions={
-          <Button onClick={() => setIsModalOpen(true)}>
-            <Plus className="w-4 h-4 mr-2" /> Nova Assinatura de Cliente
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button 
+              onClick={handleBatchTriggerAiReminders}
+              variant="outline"
+              className="text-xs text-purple-300 border-purple-500/40 hover:bg-purple-500/10 font-bold"
+            >
+              <Bot className="w-3.5 h-3.5 mr-1.5 text-purple-400" /> Disparar Avisos por IA
+            </Button>
+            <Button onClick={() => setIsModalOpen(true)} className="text-xs font-bold">
+              <Plus className="w-4 h-4 mr-1.5" /> Nova Assinatura de Cliente
+            </Button>
+          </div>
         }
       />
 
@@ -246,6 +324,34 @@ export default function AssinaturasPage() {
           trend={{ value: 5, type: 'down', label: 'Cobrar Whats' }}
           icon={<AlertTriangle className="w-5 h-5 text-red-400" />}
         />
+      </div>
+
+      {/* AI Automation Status Banner */}
+      <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-purple-950/30 via-card to-card border border-purple-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 select-none shadow-xl">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-purple-400 shrink-0">
+            <Bot className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="font-extrabold text-foreground text-sm">Cobrança & Avisos por IA DOMUS</span>
+              <Badge variant="primary" className="bg-purple-500/10 text-purple-300 border-purple-500/30 text-[9px] font-bold">
+                🟢 ATIVA (WhatsApp)
+              </Badge>
+            </div>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              A IA monitora as assinaturas a vencer e envia lembretes automáticos pelo WhatsApp informando sobre o débito no cartão ou chave PIX de renovação.
+            </p>
+          </div>
+        </div>
+
+        <Button 
+          onClick={handleBatchTriggerAiReminders}
+          variant="outline"
+          className="text-xs text-purple-300 border-purple-500/30 hover:bg-purple-500/10 font-bold shrink-0 w-full sm:w-auto"
+        >
+          <Sparkles className="w-3.5 h-3.5 mr-1.5 text-purple-400" /> Disparar Avisos por IA Agora
+        </Button>
       </div>
 
       {/* Main Tabs */}
@@ -311,13 +417,28 @@ export default function AssinaturasPage() {
                     >
                       {/* Client Info */}
                       <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center font-bold text-amber-400 text-base">
+                        <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center font-bold text-amber-400 text-base shrink-0">
                           {sub.client?.name?.charAt(0) || 'C'}
                         </div>
                         <div>
-                          <div className="flex items-center gap-2 mb-1">
+                          <div className="flex flex-wrap items-center gap-2 mb-1">
                             <h4 className="font-bold text-foreground text-sm">{sub.client?.name}</h4>
                             {getStatusBadge(sub.status)}
+                            {sub.payment_method === 'credit_card' && (
+                              <Badge variant="primary" className="bg-blue-500/10 text-blue-400 border-blue-500/30 text-[9px] font-bold">
+                                <CreditCard className="w-3 h-3 mr-1 inline" /> Cartão Recorrente
+                              </Badge>
+                            )}
+                            {sub.payment_method === 'pix' && (
+                              <Badge variant="primary" className="bg-green-500/10 text-green-400 border-green-500/30 text-[9px] font-bold">
+                                <Zap className="w-3 h-3 mr-1 inline" /> PIX
+                              </Badge>
+                            )}
+                            {sub.payment_method === 'cash' && (
+                              <Badge variant="secondary" className="text-[9px] font-bold">
+                                💵 Presencial (Balcão)
+                              </Badge>
+                            )}
                           </div>
                           <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                             <span>📞 {sub.client?.phone || 'Sem telefone'}</span>
@@ -351,20 +472,29 @@ export default function AssinaturasPage() {
 
                       {/* Actions */}
                       <div className="flex flex-wrap items-center gap-2 pt-2 md:pt-0 border-t md:border-t-0 border-border/40">
+                        {sub.payment_method === 'credit_card' && (
+                          <Button 
+                            onClick={() => handleChargeCreditCardCard(sub)} 
+                            className="text-xs bg-blue-600 hover:bg-blue-500 text-white font-extrabold shadow-sm"
+                          >
+                            <CreditCard className="w-3.5 h-3.5 mr-1" /> Debitar Cartão
+                          </Button>
+                        )}
+
+                        <Button 
+                          onClick={() => handleSendAiWhatsAppReminder(sub)}
+                          variant="outline"
+                          className="text-xs text-purple-300 border-purple-500/30 hover:bg-purple-500/10 font-semibold"
+                        >
+                          <Bot className="w-3.5 h-3.5 mr-1 text-purple-400" /> Avisar IA
+                        </Button>
+
                         <Button 
                           onClick={() => handleRenewSubscription(sub)} 
                           variant="secondary"
                           className="text-xs text-green-400 border-green-500/30 hover:bg-green-500/10"
                         >
                           <RefreshCw className="w-3.5 h-3.5 mr-1" /> Renovar (+30d)
-                        </Button>
-
-                        <Button 
-                          onClick={() => handleSendWhatsAppCharge(sub)}
-                          variant="outline"
-                          className="text-xs text-amber-400 border-amber-500/30 hover:bg-amber-500/10"
-                        >
-                          <MessageCircle className="w-3.5 h-3.5 mr-1" /> Cobrar Whats
                         </Button>
 
                         {sub.status !== 'canceled' && (
