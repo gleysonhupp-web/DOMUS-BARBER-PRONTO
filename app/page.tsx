@@ -15,9 +15,9 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col relative overflow-hidden">
-      {/* Decorative premium glows */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] rounded-full bg-primary/10 blur-[130px] pointer-events-none" />
-      <div className="absolute bottom-1/3 left-0 w-[400px] h-[400px] rounded-full bg-bronze-900/5 blur-[120px] pointer-events-none" />
+      {/* Decorative premium glows (lightweight radial gradients for zero GPU lag on mobile) */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-[radial-gradient(ellipse_at_center,rgba(234,179,8,0.12)_0%,transparent_70%)] pointer-events-none" />
+      <div className="absolute bottom-1/3 left-0 w-[400px] h-[400px] bg-[radial-gradient(circle_at_center,rgba(113,63,18,0.08)_0%,transparent_70%)] pointer-events-none" />
 
       {/* Header Portal Nav */}
       <header className="h-20 border-b border-border/40 bg-card/45 backdrop-blur-md flex items-center justify-between px-6 md:px-12 relative z-10 select-none">
