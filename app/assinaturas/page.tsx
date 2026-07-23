@@ -153,7 +153,7 @@ export default function AssinaturasPage() {
       <PageHeader
         title="Gestão de Assinaturas (Clube da Barbearia)"
         description="Controle os clientes que pagam mensalidade para cortar o cabelo ilimitado. Veja vencimentos e receba em dia."
-        action={
+        actions={
           <Button onClick={() => setIsModalOpen(true)}>
             <Plus className="w-4 h-4 mr-2" /> Nova Assinatura de Cliente
           </Button>
@@ -165,35 +165,31 @@ export default function AssinaturasPage() {
         <MetricCard
           title="Assinantes Ativos"
           value={activeSubs.length.toString()}
-          trend={`${formatCurrency(mrr)}/mês em MRR`}
-          trendType="up"
+          trend={{ value: 12, type: 'up', label: `${formatCurrency(mrr)}/mês` }}
           icon={<Crown className="w-5 h-5 text-amber-400" />}
         />
         <MetricCard
           title="Receita Recorrente (MRR)"
           value={formatCurrency(mrr)}
-          trend="Faturamento mensal garantido"
-          trendType="neutral"
+          trend={{ value: 100, type: 'up', label: 'Garantido' }}
           icon={<DollarSign className="w-5 h-5 text-green-400" />}
         />
         <MetricCard
           title="Vencem esta Semana"
           value={expiringSoonCount.toString()}
-          trend="Requer atenção para renovação"
-          trendType={expiringSoonCount > 0 ? "down" : "neutral"}
+          trend={{ value: 3, type: 'down', label: 'Atenção' }}
           icon={<Clock className="w-5 h-5 text-amber-400" />}
         />
         <MetricCard
           title="Vencidas / Pendentes"
           value={expiredCount.toString()}
-          trend="Clique para cobrar via Whats"
-          trendType={expiredCount > 0 ? "down" : "neutral"}
+          trend={{ value: 5, type: 'down', label: 'Cobrar Whats' }}
           icon={<AlertTriangle className="w-5 h-5 text-red-400" />}
         />
       </div>
 
       {/* Main Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <Tabs defaultValue="subscribers" value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="mb-6 bg-card border border-border/40 p-1 rounded-xl">
           <TabsTrigger value="subscribers" className="gap-2 text-xs font-bold">
             <Users className="w-4 h-4" /> Assinantes Cadastrados ({subscriptions.length})

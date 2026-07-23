@@ -216,7 +216,7 @@ export default function MetasPage() {
       </div>
 
       {/* Main Tabs Navigation */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="mb-6 bg-card border border-border/40 p-1 rounded-xl">
           <TabsTrigger value="overview" className="gap-2 text-xs font-bold">
             <Target className="w-4 h-4" /> Visão Geral & Missões

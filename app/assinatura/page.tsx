@@ -12,6 +12,7 @@ import {
   ArrowRight, User, Heart, Sparkles, MapPin, Gift, Zap
 } from 'lucide-react';
 import { useToast } from '../../components/ui/Toast';
+import Badge from '../../components/ui/Badge';
 
 export default function PublicClientSubscriptionPage() {
   const { toast } = useToast();
