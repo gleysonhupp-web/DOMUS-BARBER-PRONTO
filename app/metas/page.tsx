@@ -24,7 +24,20 @@ export default function MetasPage() {
   const user = db.getCurrentUser();
   const companyId = company?.id ?? 'c1111111-1111-1111-1111-111111111111';
 
-  const professionals = db.getProfessionals(companyId);
+  const dbProfs = db.getProfessionals(companyId);
+  const defaultBarbers = [
+    { id: 'p-1', name: 'Gustavo Santos', commission_rate: 100, is_leader: true, avatar_url: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150' },
+    { id: 'p-2', name: 'Mozinne o Barbeiro', commission_rate: 100, is_leader: true, avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Mozinne' },
+    { id: 'p-3', name: 'Rodrigo Oliveira', commission_rate: 50, is_leader: false, avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Rodrigo' },
+    { id: 'p-4', name: 'Lucas Silva', commission_rate: 50, is_leader: false, avatar_url: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Lucas' },
+  ];
+
+  // Merge database barbers with defaults so there are always multiple barbers to select
+  const professionals = [
+    ...dbProfs,
+    ...defaultBarbers.filter(d => !dbProfs.some(p => p.name.toLowerCase() === d.name.toLowerCase() || p.id === d.id))
+  ];
+
   const [selectedProfId, setSelectedProfId] = useState<string>(() => {
     return professionals[0]?.id || 'p-1';
   });
@@ -63,7 +76,7 @@ export default function MetasPage() {
     return {
       ...baseGoal,
       ...custom,
-      profName: prof?.name || 'Gustavo',
+      profName: prof?.name || 'Barbeiro',
       profAvatar: prof?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(prof?.name || 'barber')}`,
       profRole: prof?.is_leader ? 'PROPRIETÁRIO / LÍDER' : 'BARBEIRO DA EQUIPE'
     };
@@ -126,46 +139,71 @@ export default function MetasPage() {
       />
 
       {/* Barber Selector Bar (Mudar de Barbeiro) */}
-      <div className="mb-6 bg-[#1A1D24] border border-amber-500/30 rounded-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-4 shadow-xl">
+      <div className="mb-6 bg-[#1A1D24] border border-amber-500/30 rounded-2xl p-4 md:p-5 flex flex-col md:flex-row items-center justify-between gap-4 shadow-xl">
         <div className="flex items-center gap-3 w-full md:w-auto">
-          <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
-            <Scissors className="w-5 h-5" />
+          <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0 shadow-inner">
+            <Scissors className="w-6 h-6" />
           </div>
           <div>
-            <span className="text-[10px] font-extrabold text-amber-400 uppercase tracking-widest block">MUDAR DE BARBEIRO</span>
+            <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest block">MUDAR DE BARBEIRO</span>
             <div className="text-sm font-bold text-foreground flex items-center gap-2">
-              <span>Visualizando metas de:</span>
-              <strong className="text-amber-400 font-extrabold">{currentGoalData.profName}</strong>
+              <span>Exibindo metas de:</span>
+              <strong className="text-amber-400 font-black text-base">{currentGoalData.profName}</strong>
             </div>
           </div>
         </div>
 
-        {/* Barber Buttons Selector */}
-        <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0 scrollbar-none">
-          {professionals.map(prof => {
-            const isSelected = selectedProfId === prof.id;
-            return (
-              <button
-                key={prof.id}
-                onClick={() => {
-                  setSelectedProfId(prof.id);
-                  toast(`Exibindo metas e pontuação de ${prof.name}`, 'info', 'Barbeiro Selecionado');
-                }}
-                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border shrink-0 ${
-                  isSelected
-                    ? 'bg-gradient-to-r from-[#B86D43] via-[#D28859] to-[#9E5732] text-white border-amber-400/50 font-black shadow-lg shadow-amber-950/40 scale-[1.02]'
-                    : 'bg-[#242730] text-muted-foreground border-border/40 hover:bg-[#2F333E] hover:text-foreground'
-                }`}
-              >
-                <img
-                  src={prof.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(prof.name)}`}
-                  alt={prof.name}
-                  className="w-5 h-5 rounded-full object-cover border border-white/20"
-                />
-                <span>{prof.name}</span>
-              </button>
-            );
-          })}
+        {/* Dropdown Selector + Quick Buttons */}
+        <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
+          {/* Main Dropdown Select */}
+          <div className="relative w-full sm:w-auto">
+            <select
+              value={selectedProfId}
+              onChange={(e) => {
+                const newId = e.target.value;
+                setSelectedProfId(newId);
+                const p = professionals.find(item => item.id === newId);
+                toast(`Exibindo metas e pontuação de ${p?.name || 'Barbeiro'}`, 'info', 'Barbeiro Selecionado');
+              }}
+              className="w-full sm:w-60 bg-[#242730] border border-amber-500/50 text-amber-300 text-xs font-black rounded-xl px-4 py-3 appearance-none outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer shadow-lg pr-10"
+            >
+              {professionals.map(prof => (
+                <option key={prof.id} value={prof.id} className="bg-[#1A1D24] text-foreground font-bold py-2">
+                  💈 {prof.name} {prof.is_leader ? '(Líder)' : ''}
+                </option>
+              ))}
+            </select>
+            <ChevronRight className="w-4 h-4 text-amber-400 absolute right-3 top-1/2 -translate-y-1/2 rotate-90 pointer-events-none" />
+          </div>
+
+          {/* Quick Select Buttons */}
+          <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0 scrollbar-none">
+            {professionals.map(prof => {
+              const isSelected = selectedProfId === prof.id;
+              return (
+                <button
+                  key={prof.id}
+                  type="button"
+                  onClick={() => {
+                    setSelectedProfId(prof.id);
+                    toast(`Exibindo metas e pontuação de ${prof.name}`, 'info', 'Barbeiro Selecionado');
+                  }}
+                  className={`flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer border shrink-0 ${
+                    isSelected
+                      ? 'bg-gradient-to-r from-[#B86D43] via-[#D28859] to-[#9E5732] text-white border-amber-400 font-black shadow-md shadow-amber-950/40'
+                      : 'bg-[#242730] text-muted-foreground border-border/40 hover:bg-[#2F333E] hover:text-foreground'
+                  }`}
+                >
+                  <img
+                    src={prof.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(prof.name)}`}
+                    alt={prof.name}
+                    className="w-4 h-4 rounded-full object-cover border border-white/20"
+                  />
+                  <span>{prof.name.split(' ')[0]}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
