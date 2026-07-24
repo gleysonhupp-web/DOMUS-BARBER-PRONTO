@@ -1,7 +1,7 @@
 // app/metas/page.tsx
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { PageHeader } from '../../components/ui/DashboardWidgets';
 import Card, { CardHeader, CardTitle, CardDescription, CardContent } from '../../components/ui/Card';

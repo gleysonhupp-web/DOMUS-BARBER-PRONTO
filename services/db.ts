@@ -609,7 +609,6 @@ export const db = {
       status: 'active',
       current_period_start: new Date().toISOString(),
       current_period_end: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-      cancel_at_period_end: false,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
