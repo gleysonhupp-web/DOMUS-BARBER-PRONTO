@@ -275,6 +275,15 @@ function DraggableAppointment({ appointment, top, height, onClick }: any) {
   const currentStyle = statusStyles[appointment.status as keyof typeof statusStyles] || statusStyles.scheduled;
   const currentLabel = statusLabel[appointment.status as keyof typeof statusLabel] || "Agendado";
 
+  const paymentLabels: Record<string, string> = {
+    credit_card: '💳 Crédito',
+    debit_card: '💳 Débito',
+    pix: '⚡ PIX',
+    cash: '💵 Dinheiro',
+    subscription: '⭐ Assinatura',
+    unpaid: '❌ Não pago'
+  };
+
   return (
     <div 
       ref={setNodeRef}
@@ -289,7 +298,14 @@ function DraggableAppointment({ appointment, top, height, onClick }: any) {
       onDoubleClick={(e) => { e.stopPropagation(); onClick(); }} // double click to edit to not interfere with drag
     >
       <div className="flex flex-col gap-0.5">
-        <span className="text-[10px] font-bold leading-tight truncate">{appointment.client?.name}</span>
+        <div className="flex items-center justify-between gap-1">
+          <span className="text-[10px] font-bold leading-tight truncate">{appointment.client?.name}</span>
+          {appointment.payment_method && (
+            <span className="text-[8px] font-black px-1 rounded bg-black/40 text-amber-300 shrink-0">
+              {paymentLabels[appointment.payment_method] || appointment.payment_method}
+            </span>
+          )}
+        </div>
         <span className="text-[9px] opacity-80 leading-tight truncate">{appointment.service?.name}</span>
       </div>
       
@@ -298,7 +314,9 @@ function DraggableAppointment({ appointment, top, height, onClick }: any) {
           <span className="text-[8px] font-bold px-1 py-0.5 rounded-sm bg-background/50 backdrop-blur-sm">
             {currentLabel}
           </span>
-          <span className="text-[9px] font-extrabold">{formatCurrency(appointment.total_price)}</span>
+          <span className="text-[9px] font-extrabold font-mono">
+            {formatCurrency(appointment.total_price || appointment.service?.price || 0)}
+          </span>
         </div>
       )}
     </div>

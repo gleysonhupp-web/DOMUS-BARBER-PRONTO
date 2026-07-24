@@ -92,9 +92,19 @@ export default function ListView({ date, appointments, onAppointmentClick }: Lis
                     
                     {/* Info */}
                     <div className="flex flex-col gap-1">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-bold text-foreground">{apt.client?.name}</span>
                         <Badge variant={getStatusColor(apt.status) as any} className="text-[10px] h-5 px-1.5">{getStatusLabel(apt.status)}</Badge>
+                        {apt.payment_method && (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30">
+                            {apt.payment_method === 'credit_card' && '💳 Cartão de crédito'}
+                            {apt.payment_method === 'debit_card' && '💳 Cartão de débito'}
+                            {apt.payment_method === 'pix' && '⚡ PIX'}
+                            {apt.payment_method === 'cash' && '💵 Dinheiro'}
+                            {apt.payment_method === 'subscription' && '⭐ Assinatura'}
+                            {apt.payment_method === 'unpaid' && '❌ Não pago'}
+                          </span>
+                        )}
                       </div>
                       <div className="flex items-center gap-4 text-xs text-muted-foreground">
                         <span className="flex items-center gap-1.5"><Scissors className="w-3.5 h-3.5" /> {apt.service?.name}</span>
@@ -105,7 +115,7 @@ export default function ListView({ date, appointments, onAppointmentClick }: Lis
                   
                   {/* Price & Action */}
                   <div className="flex items-center justify-between md:justify-end gap-6 border-t md:border-t-0 border-border/40 pt-3 md:pt-0">
-                    <span className="font-extrabold text-foreground">{formatCurrency(apt.total_price)}</span>
+                    <span className="font-extrabold text-foreground">{formatCurrency(apt.total_price || apt.service?.price || 0)}</span>
                     <Button variant="outline" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity">
                       Detalhes
                     </Button>

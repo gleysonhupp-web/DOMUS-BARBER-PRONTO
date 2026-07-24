@@ -43,6 +43,7 @@ export default function AppointmentModal({
   const [formTime, setFormTime] = useState('');
   const [formNotes, setFormNotes] = useState('');
   const [formStatus, setFormStatus] = useState('scheduled');
+  const [formPaymentMethod, setFormPaymentMethod] = useState<string>('pix');
   
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -60,6 +61,7 @@ export default function AppointmentModal({
           setFormTime(apt.start_time.split('T')[1].substring(0, 5));
           setFormNotes(apt.notes || '');
           setFormStatus(apt.status);
+          setFormPaymentMethod(apt.payment_method || 'pix');
         }
       } else {
         // Create mode
@@ -67,6 +69,7 @@ export default function AppointmentModal({
         setFormService('');
         setFormNotes('');
         setFormStatus('scheduled');
+        setFormPaymentMethod('pix');
         
         if (defaultTime) {
           setFormDate(defaultTime.date.toISOString().split('T')[0]);
@@ -134,6 +137,7 @@ export default function AppointmentModal({
       start_time: startISO,
       end_time: endISO,
       status: formStatus as any,
+      payment_method: formPaymentMethod,
       notes: formNotes,
       total_price: selectedService?.price || 0,
       updated_at: new Date().toISOString(),
@@ -179,10 +183,10 @@ export default function AppointmentModal({
         company_id: companyId,
         type: 'income' as const,
         category: 'service_appointment' as const,
-        amount: selectedService?.price || 0,
+        amount: formPaymentMethod === 'subscription' ? 0 : (selectedService?.price || 0),
         description: `Agendamento: ${selectedService?.name} (${selectedClient?.name}) - Prof: ${selectedProfessional?.name}`,
         date: formDate,
-        payment_method: 'pix' as const, // default mock
+        payment_method: (formPaymentMethod === 'subscription' ? 'cash' : formPaymentMethod) as any,
         appointment_id: appointmentId || 'new',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -190,7 +194,7 @@ export default function AppointmentModal({
       db.saveFinancialTransactions([newTx, ...txs]);
       
       // Also mock stock deduction
-      toast('Atendimento finalizado! Receita registrada e estoque atualizado.', 'success', 'Concluído');
+      toast('Atendimento finalizado! Receita registrada no caixa.', 'success', 'Concluído');
     } else {
       toast(isNew ? 'Agendamento criado.' : 'Agendamento atualizado.', 'success', 'Sucesso');
     }
@@ -295,6 +299,25 @@ export default function AppointmentModal({
             </div>
           </div>
         )}
+
+        {/* Forma de Pagamento (Matching User Screenshot) */}
+        <div>
+          <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest block mb-1.5">
+            FORMA DE PAGAMENTO
+          </label>
+          <select
+            value={formPaymentMethod}
+            onChange={(e) => setFormPaymentMethod(e.target.value)}
+            className="w-full bg-[#242730] border border-border/40 text-foreground text-sm rounded-2xl px-4 py-3.5 font-bold outline-none focus:border-amber-500/50 transition-all cursor-pointer"
+          >
+            <option value="credit_card">💳 Cartão de crédito</option>
+            <option value="debit_card">💳 Cartão de débito</option>
+            <option value="pix">⚡ PIX</option>
+            <option value="cash">💵 Dinheiro</option>
+            <option value="subscription">⭐ Assinatura (Clube Assinantes)</option>
+            <option value="unpaid">❌ Não pago</option>
+          </select>
+        </div>
 
         <Input
           type="text"

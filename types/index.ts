@@ -100,6 +100,7 @@ export interface Appointment {
   start_time: string;
   end_time: string;
   status: AppointmentStatus;
+  payment_method?: PaymentMethod | string | null;
   notes?: string | null;
   total_price: number;
   created_at: string;
