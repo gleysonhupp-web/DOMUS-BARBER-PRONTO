@@ -13,7 +13,7 @@ import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import Card from '../../components/ui/Card';
 import { Avatar } from '../../components/ui/Avatar';
-import { Plus, User, Percent, Pencil, Trash2, AlertTriangle } from 'lucide-react';
+import { Plus, User, Percent, Pencil, Trash2, AlertTriangle, Camera } from 'lucide-react';
 
 export default function ProfissionaisPage() {
   const { toast } = useToast();
@@ -28,8 +28,11 @@ export default function ProfissionaisPage() {
 
   // Form states
   const [name, setName] = useState('');
-  const [bio, setBio] = useState('');
-  const [commission, setCommission] = useState('40');
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
+  const [commission, setCommission] = useState('100');
+  const [isLeader, setIsLeader] = useState(true);
+  const [avatarUrl, setAvatarUrl] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const loadData = useCallback(() => {
@@ -40,15 +43,23 @@ export default function ProfissionaisPage() {
 
   const openAddModal = () => {
     setEditingProf(null);
-    setName(''); setBio(''); setCommission('40');
+    setName('');
+    setPhone('');
+    setEmail('');
+    setCommission('100');
+    setIsLeader(true);
+    setAvatarUrl('');
     setIsModalOpen(true);
   };
 
   const openEditModal = (prof: any) => {
     setEditingProf(prof);
-    setName(prof.name);
-    setBio(prof.bio || '');
-    setCommission(String(prof.commission_rate));
+    setName(prof.name || '');
+    setPhone(prof.phone || '');
+    setEmail(prof.email || '');
+    setCommission(String(prof.commission_rate ?? 100));
+    setIsLeader(prof.is_leader ?? true);
+    setAvatarUrl(prof.avatar_url || '');
     setIsModalOpen(true);
   };
 
@@ -67,7 +78,16 @@ export default function ProfissionaisPage() {
     if (editingProf) {
       const updated = allProfs.map(p =>
         p.id === editingProf.id
-          ? { ...p, name, bio: bio || null, commission_rate: Number(commission), updated_at: new Date().toISOString() }
+          ? { 
+              ...p, 
+              name, 
+              phone: phone || null, 
+              email: email || null, 
+              commission_rate: Number(commission), 
+              is_leader: isLeader,
+              avatar_url: avatarUrl || p.avatar_url,
+              updated_at: new Date().toISOString() 
+            }
           : p
       );
       db.saveProfessionals(updated);
@@ -79,9 +99,12 @@ export default function ProfissionaisPage() {
         company_id: company.id,
         user_id: null,
         name,
-        bio: bio || null,
-        avatar_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name)}`,
+        phone: phone || null,
+        email: email || null,
+        bio: null,
+        avatar_url: avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name)}`,
         commission_rate: Number(commission),
+        is_leader: isLeader,
         is_active: true,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -208,42 +231,125 @@ export default function ProfissionaisPage() {
         )}
       </Card>
 
-      {/* Add / Edit Modal */}
+      {/* Add / Edit Modal (Matching Mockup #1) */}
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         title={editingProf ? 'Editar Profissional' : 'Adicionar Profissional'}
-        description={editingProf ? 'Atualize os dados do profissional.' : 'Cadastre um novo barbeiro ou cabeleireiro na equipe.'}
+        description=""
       >
-        <form onSubmit={handleSave} className="flex flex-col gap-4">
-          <Input
-            type="text"
-            label="Nome Completo *"
-            placeholder="Ex: Gustavo Santos"
-            value={name}
-            onChange={e => setName(e.target.value)}
-            autoFocus
-          />
-          <Input
-            type="text"
-            label="Especialidades / Bio"
-            placeholder="Ex: Especialista em barboterapia clássica."
-            value={bio}
-            onChange={e => setBio(e.target.value)}
-          />
-          <Input
-            type="number"
-            label="Taxa de Comissão (%) *"
-            placeholder="40"
-            value={commission}
-            onChange={e => setCommission(e.target.value)}
-            icon={<Percent className="w-4 h-4 text-muted-foreground/60" />}
-            min="0"
-            max="100"
-          />
-          <Button type="submit" isLoading={isSubmitting} className="w-full mt-4">
-            {editingProf ? 'Salvar Alterações' : 'Salvar Profissional na Equipe'}
-          </Button>
+        <form onSubmit={handleSave} className="flex flex-col gap-4 text-left pt-1">
+          
+          {/* Avatar Upload Container */}
+          <div className="flex flex-col items-center justify-center mb-2">
+            <div className="w-28 h-28 rounded-[2rem] bg-[#2A2D35] flex items-center justify-center relative shadow-xl border border-white/10 cursor-pointer group hover:border-amber-500/40 transition-all overflow-hidden">
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-[#2A2D35]">
+                  <User className="w-10 h-10 text-muted-foreground/50" />
+                </div>
+              )}
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 px-2.5 py-1 rounded-full bg-black/80 border border-white/10 flex items-center justify-center text-white">
+                <Camera className="w-3.5 h-3.5" />
+              </div>
+            </div>
+          </div>
+
+          {/* Field 1: NOME (APARECERÁ NA AGENDA) */}
+          <div>
+            <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest block mb-1.5">
+              NOME (APARECERÁ NA AGENDA)
+            </label>
+            <input
+              type="text"
+              placeholder="Mozinne o Barbeiro"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              className="w-full bg-[#242730] border border-border/40 text-foreground text-sm rounded-2xl px-4 py-3.5 font-medium outline-none focus:border-amber-500/50 transition-all"
+              required
+            />
+          </div>
+
+          {/* Field 2: TELEFONE */}
+          <div>
+            <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest block mb-1.5">
+              TELEFONE
+            </label>
+            <div className="flex items-center bg-[#242730] border border-border/40 text-foreground text-sm rounded-2xl px-4 py-3.5 outline-none font-mono focus-within:border-amber-500/50 transition-all gap-2">
+              <span className="flex items-center gap-1 text-xs font-bold text-muted-foreground border-r border-border/40 pr-3 shrink-0 select-none">
+                🇧🇷 ▾  +55
+              </span>
+              <input
+                type="text"
+                placeholder="27 99906-6327"
+                value={phone}
+                onChange={e => setPhone(e.target.value)}
+                className="w-full bg-transparent border-none text-foreground text-sm font-mono outline-none"
+              />
+            </div>
+          </div>
+
+          {/* Field 3: E-MAIL */}
+          <div>
+            <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest block mb-1.5">
+              E-MAIL
+            </label>
+            <input
+              type="email"
+              placeholder="mozinne.sm@gmail.com"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              className="w-full bg-[#242730] border border-border/40 text-foreground text-sm rounded-2xl px-4 py-3.5 font-medium outline-none focus:border-amber-500/50 transition-all"
+            />
+          </div>
+
+          {/* Field 4: COMISSÃO (%) */}
+          <div>
+            <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest block mb-1.5">
+              COMISSÃO (%)
+            </label>
+            <input
+              type="number"
+              placeholder="100"
+              value={commission}
+              onChange={e => setCommission(e.target.value)}
+              className="w-full bg-[#242730] border border-border/40 text-foreground text-sm rounded-2xl px-4 py-3.5 font-mono font-bold outline-none focus:border-amber-500/50 transition-all"
+              min="0"
+              max="100"
+              required
+            />
+          </div>
+
+          {/* Field 5: Toggle Card ("Este profissional é um líder?") */}
+          <div className="p-4 rounded-2xl bg-[#242730] border border-border/40 space-y-2 select-none">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setIsLeader(!isLeader)}
+                className={`w-12 h-6.5 rounded-full transition-all p-0.5 cursor-pointer relative ${
+                  isLeader ? 'bg-emerald-500' : 'bg-secondary'
+                }`}
+              >
+                <div className={`w-5 h-5 bg-white rounded-full transition-transform shadow ${
+                  isLeader ? 'translate-x-5.5' : 'translate-x-0'
+                }`} />
+              </button>
+              <span className="font-bold text-foreground text-sm">Este profissional é um líder?</span>
+            </div>
+            <p className="text-xs text-muted-foreground/80 leading-relaxed pl-0.5">
+              Um líder pode visualizar, agendar e gerenciar a agenda de outros profissionais.
+            </p>
+          </div>
+
+          {/* Bottom Full-Width Copper/Bronze Button: SALVAR */}
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="w-full py-4 rounded-2xl bg-gradient-to-r from-[#B86D43] via-[#D28859] to-[#9E5732] hover:brightness-110 active:scale-[0.99] text-white font-black text-sm tracking-widest uppercase transition-all shadow-xl shadow-amber-950/40 cursor-pointer mt-4"
+          >
+            SALVAR
+          </button>
         </form>
       </Modal>
 

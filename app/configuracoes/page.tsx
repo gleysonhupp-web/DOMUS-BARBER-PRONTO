@@ -13,7 +13,7 @@ import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import Card, { CardHeader, CardTitle, CardDescription, CardContent } from '../../components/ui/Card';
 import { Avatar } from '../../components/ui/Avatar';
-import { Building, Shield, CreditCard, Users, History, FileLock, UserCheck } from 'lucide-react';
+import { Building, Shield, CreditCard, Users, History, FileLock, UserCheck, Camera } from 'lucide-react';
 import { formatCurrency } from '../../lib/utils';
 
 export default function ConfiguracoesPage() {
@@ -23,6 +23,15 @@ export default function ConfiguracoesPage() {
 
   const [companyName, setCompanyName] = useState('');
   const [slug, setSlug] = useState('');
+  const [address, setAddress] = useState('');
+  const [number, setNumber] = useState('');
+  const [complement, setComplement] = useState('');
+  const [neighborhood, setNeighborhood] = useState('');
+  const [city, setCity] = useState('');
+  const [state, setState] = useState('');
+  const [phone, setPhone] = useState('');
+  const [logoUrl, setLogoUrl] = useState('');
+
   const [subscription, setSubscription] = useState<any>(null);
   const [members, setMembers] = useState<any[]>([]);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
@@ -34,8 +43,16 @@ export default function ConfiguracoesPage() {
     if (companyId) {
       const currentCompany = db.getCurrentCompany(); // get latest safely without triggering loop
       if (currentCompany) {
-        setCompanyName(currentCompany.name);
-        setSlug(currentCompany.slug);
+        setCompanyName(currentCompany.name || '');
+        setSlug(currentCompany.slug || '');
+        setAddress(currentCompany.address || '');
+        setNumber(currentCompany.number || '');
+        setComplement(currentCompany.complement || '');
+        setNeighborhood(currentCompany.neighborhood || '');
+        setCity(currentCompany.city || '');
+        setState(currentCompany.state || '');
+        setPhone(currentCompany.phone || '27 99906-6327');
+        setLogoUrl(currentCompany.logo_url || '');
       }
       
       // Load sub
@@ -64,7 +81,15 @@ export default function ConfiguracoesPage() {
     const updated = {
       ...company,
       name: companyName,
-      slug: slug.toLowerCase().replace(/[^a-z0-9-_]/g, '')
+      slug: slug ? slug.toLowerCase().replace(/[^a-z0-9-_]/g, '') : company.slug,
+      address,
+      number,
+      complement,
+      neighborhood,
+      city,
+      state,
+      phone,
+      logo_url: logoUrl || company.logo_url
     };
 
     // Update in list
@@ -80,7 +105,7 @@ export default function ConfiguracoesPage() {
     setAuditLogs(db.getAuditLogs(company.id));
 
     setIsSaving(false);
-    toast('Configurações do estabelecimento salvas!', 'success', 'Sucesso');
+    toast('Informações da barbearia salvas com sucesso!', 'success', 'Sucesso');
   };
 
   // Member Table Columns
@@ -198,36 +223,150 @@ export default function ConfiguracoesPage() {
           </TabsTrigger>
         </TabsList>
 
-        {/* TAB 1: Company details */}
+        {/* TAB 1: Company details (Matching Mockup #2) */}
         <TabsContent value="estabelecimento">
-          <div className="max-w-2xl text-left">
-            <Card className="border border-border/40">
-              <CardHeader className="border-b border-border/20 pb-3 mb-5">
-                <CardTitle>Perfil da Barbearia</CardTitle>
-                <CardDescription>Ajuste as informações básicas de exibição pública.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleUpdateCompany} className="flex flex-col gap-4">
-                  <Input
+          <div className="max-w-2xl text-left mx-auto">
+            <Card className="border border-border/40 p-6 md:p-8">
+              <form onSubmit={handleUpdateCompany} className="flex flex-col gap-4">
+                
+                {/* Camera Logo Upload Header */}
+                <div className="flex flex-col items-center justify-center mb-2">
+                  <div className="w-16 h-16 rounded-full bg-[#2A2D35] flex items-center justify-center relative shadow-xl border border-white/10 cursor-pointer group hover:border-amber-500/40 transition-all overflow-hidden">
+                    {logoUrl ? (
+                      <img src={logoUrl} alt="Logo" className="w-full h-full object-cover" />
+                    ) : (
+                      <Camera className="w-6 h-6 text-white" />
+                    )}
+                  </div>
+                </div>
+
+                {/* Field 1: NOME FANTASIA */}
+                <div>
+                  <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest block mb-1.5">
+                    NOME FANTASIA
+                  </label>
+                  <input
                     type="text"
-                    label="Nome do Estabelecimento"
+                    placeholder="Barbearia Mozinne"
                     value={companyName}
-                    onChange={(e) => setCompanyName(e.target.value)}
+                    onChange={e => setCompanyName(e.target.value)}
+                    className="w-full bg-[#242730] border border-border/40 text-foreground text-sm rounded-2xl px-4 py-3.5 font-medium outline-none focus:border-amber-500/50 transition-all"
+                    required
                   />
+                </div>
 
-                  <Input
+                {/* Field 2: ENDEREÇO */}
+                <div>
+                  <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest block mb-1.5">
+                    ENDEREÇO
+                  </label>
+                  <input
                     type="text"
-                    label="Endereço Slug (Link Público)"
-                    value={slug}
-                    onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-_]/g, ''))}
-                    icon={<span className="text-xs text-muted-foreground/60 pr-1">domusbarber.com.br/</span>}
+                    placeholder="Ex: Rua Padre Manuel..."
+                    value={address}
+                    onChange={e => setAddress(e.target.value)}
+                    className="w-full bg-[#242730] border border-border/40 text-foreground text-sm rounded-2xl px-4 py-3.5 font-medium outline-none focus:border-amber-500/50 transition-all"
                   />
+                </div>
 
-                  <Button type="submit" isLoading={isSaving} className="w-max self-end mt-2">
-                    Salvar Alterações
-                  </Button>
-                </form>
-              </CardContent>
+                {/* Row: NÚMERO & COMPLEMENTO */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest block mb-1.5">
+                      NÚMERO
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="123"
+                      value={number}
+                      onChange={e => setNumber(e.target.value)}
+                      className="w-full bg-[#242730] border border-border/40 text-foreground text-sm rounded-2xl px-4 py-3.5 font-medium outline-none focus:border-amber-500/50 transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest block mb-1.5">
+                      COMPLEMENTO
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Sala 02"
+                      value={complement}
+                      onChange={e => setComplement(e.target.value)}
+                      className="w-full bg-[#242730] border border-border/40 text-foreground text-sm rounded-2xl px-4 py-3.5 font-medium outline-none focus:border-amber-500/50 transition-all"
+                    />
+                  </div>
+                </div>
+
+                {/* Field 5: BAIRRO */}
+                <div>
+                  <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest block mb-1.5">
+                    BAIRRO
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Centro"
+                    value={neighborhood}
+                    onChange={e => setNeighborhood(e.target.value)}
+                    className="w-full bg-[#242730] border border-border/40 text-foreground text-sm rounded-2xl px-4 py-3.5 font-medium outline-none focus:border-amber-500/50 transition-all"
+                  />
+                </div>
+
+                {/* Field 6: CIDADE */}
+                <div>
+                  <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest block mb-1.5">
+                    CIDADE
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Vitória"
+                    value={city}
+                    onChange={e => setCity(e.target.value)}
+                    className="w-full bg-[#242730] border border-border/40 text-foreground text-sm rounded-2xl px-4 py-3.5 font-medium outline-none focus:border-amber-500/50 transition-all"
+                  />
+                </div>
+
+                {/* Field 7: ESTADO */}
+                <div>
+                  <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest block mb-1.5">
+                    ESTADO
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="ES"
+                    value={state}
+                    onChange={e => setState(e.target.value)}
+                    className="w-full bg-[#242730] border border-border/40 text-foreground text-sm rounded-2xl px-4 py-3.5 font-medium outline-none focus:border-amber-500/50 transition-all"
+                  />
+                </div>
+
+                {/* Field 8: TELEFONE */}
+                <div>
+                  <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest block mb-1.5">
+                    TELEFONE
+                  </label>
+                  <div className="flex items-center bg-[#242730] border border-border/40 text-foreground text-sm rounded-2xl px-4 py-3.5 outline-none font-mono focus-within:border-amber-500/50 transition-all gap-2">
+                    <span className="flex items-center gap-1 text-xs font-bold text-muted-foreground border-r border-border/40 pr-3 shrink-0 select-none">
+                      🇧🇷 ▾  +55
+                    </span>
+                    <input
+                      type="text"
+                      placeholder="27 99906-6327"
+                      value={phone}
+                      onChange={e => setPhone(e.target.value)}
+                      className="w-full bg-transparent border-none text-foreground text-sm font-mono outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Bottom Full-Width Copper/Bronze Button: SALVAR */}
+                <button
+                  type="submit"
+                  disabled={isSaving}
+                  className="w-full py-4 rounded-2xl bg-gradient-to-r from-[#B86D43] via-[#D28859] to-[#9E5732] hover:brightness-110 active:scale-[0.99] text-white font-black text-sm tracking-widest uppercase transition-all shadow-xl shadow-amber-950/40 cursor-pointer mt-4"
+                >
+                  SALVAR
+                </button>
+              </form>
             </Card>
           </div>
         </TabsContent>

@@ -17,6 +17,13 @@ export interface Company {
   name: string;
   slug: string;
   logo_url?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  number?: string | null;
+  complement?: string | null;
+  neighborhood?: string | null;
+  city?: string | null;
+  state?: string | null;
   theme_config?: Record<string, any>;
   created_at: string;
   updated_at: string;
@@ -60,9 +67,12 @@ export interface Professional {
   company_id: string;
   user_id?: string | null;
   name: string;
+  phone?: string | null;
+  email?: string | null;
   bio?: string | null;
   avatar_url?: string | null;
   commission_rate: number;
+  is_leader?: boolean;
   is_active: boolean;
   created_at: string;
   updated_at: string;
