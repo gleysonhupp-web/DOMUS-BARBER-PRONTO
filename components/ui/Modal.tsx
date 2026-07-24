@@ -65,7 +65,7 @@ export const Modal = ({
 
           {/* Modal / Drawer wrapper */}
           <div className={cn(
-            "fixed z-50 w-full flex items-center justify-center p-4",
+            "fixed z-50 w-full inset-0 flex items-center justify-center p-4 overflow-y-auto pointer-events-none",
             isDrawer ? "inset-y-0 right-0 p-0 max-w-md justify-end" : ""
           )}>
             <motion.div
@@ -74,8 +74,8 @@ export const Modal = ({
               exit={isDrawer ? { x: "100%" } : { opacity: 0, scale: 0.95, y: 10 }}
               transition={{ type: "spring", duration: 0.35, bounce: 0.15 }}
               className={cn(
-                "glass-card w-full flex flex-col overflow-hidden relative border border-border shadow-2xl rounded-xl",
-                isDrawer ? "h-full rounded-r-none border-l border-y-0" : sizes[size],
+                "glass-card w-full flex flex-col overflow-hidden relative border border-border shadow-2xl rounded-2xl max-h-[90vh] pointer-events-auto my-auto",
+                isDrawer ? "h-full rounded-r-none border-l border-y-0 max-h-full" : sizes[size],
               )}
             >
               {/* Header */}

@@ -199,6 +199,15 @@ export default function AppointmentModal({
     onSaved();
   };
 
+  const handleDeleteAppointment = () => {
+    if (!appointmentId || !companyId) return;
+    const allApts = db.getAppointments(companyId);
+    const updated = allApts.filter(a => a.id !== appointmentId);
+    db.saveAppointments(updated);
+    toast('Agendamento excluído com sucesso.', 'info', 'Removido');
+    onSaved();
+  };
+
   const selectedService = services.find(s => s.id === formService);
 
   return (
@@ -208,16 +217,16 @@ export default function AppointmentModal({
       title={appointmentId ? "Detalhes do Agendamento" : "Novo Agendamento"}
       description="Preencha os dados abaixo para reservar ou atualizar o horário."
     >
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4 pb-2">
         
         {/* Status indicator for Edit Mode */}
         {appointmentId && (
-          <div className="flex items-center gap-2 mb-2 p-3 bg-secondary/10 rounded-lg border border-border/40">
+          <div className="flex items-center gap-2 mb-1 p-3 bg-[#242730] rounded-xl border border-border/40">
             <span className="text-xs font-bold text-muted-foreground mr-auto">Status do Atendimento:</span>
             <select 
               value={formStatus}
               onChange={(e) => setFormStatus(e.target.value)}
-              className="bg-background border border-border rounded px-2 py-1 text-xs font-bold focus:ring-1 focus:ring-primary outline-none"
+              className="bg-background border border-border text-foreground rounded-lg px-3 py-1.5 text-xs font-bold focus:ring-1 focus:ring-amber-500 outline-none"
             >
               <option value="scheduled">Agendado</option>
               <option value="confirmed">Confirmado</option>
@@ -275,14 +284,14 @@ export default function AppointmentModal({
         </div>
 
         {selectedService && (
-          <div className="flex justify-between items-center p-3 rounded-lg bg-secondary/20 border border-border/40">
+          <div className="flex justify-between items-center p-3 rounded-xl bg-secondary/30 border border-border/40 font-mono">
             <div className="flex flex-col">
               <span className="text-[10px] uppercase text-muted-foreground font-bold">Duração Estimada</span>
               <span className="text-sm font-extrabold text-foreground">{selectedService.duration_minutes} minutos</span>
             </div>
             <div className="flex flex-col items-end">
               <span className="text-[10px] uppercase text-muted-foreground font-bold">Valor Total</span>
-              <span className="text-sm font-extrabold text-primary">{formatCurrency(selectedService.price)}</span>
+              <span className="text-sm font-extrabold text-amber-400">{formatCurrency(selectedService.price)}</span>
             </div>
           </div>
         )}
@@ -295,9 +304,25 @@ export default function AppointmentModal({
           onChange={(e) => setFormNotes(e.target.value)}
         />
 
-        <Button type="submit" isLoading={isSubmitting} className="w-full mt-4">
-          {appointmentId ? "Salvar Alterações" : "Confirmar e Reservar Horário"}
-        </Button>
+        <div className="flex flex-col sm:flex-row items-center gap-3 mt-4 pt-2 border-t border-border/20">
+          {appointmentId && (
+            <button
+              type="button"
+              onClick={handleDeleteAppointment}
+              className="w-full sm:w-auto px-4 py-3.5 rounded-xl border border-red-500/40 text-red-400 hover:bg-red-500/10 font-bold text-xs transition-all cursor-pointer shrink-0"
+            >
+              Excluir
+            </button>
+          )}
+
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="w-full py-3.5 rounded-xl bg-gradient-to-r from-[#B86D43] via-[#D28859] to-[#9E5732] hover:brightness-110 active:scale-[0.99] text-white font-extrabold text-xs tracking-wider uppercase transition-all shadow-lg shadow-amber-950/30 cursor-pointer"
+          >
+            {appointmentId ? "Salvar Alterações" : "Confirmar e Reservar Horário"}
+          </button>
+        </div>
       </form>
     </Modal>
   );
