@@ -650,12 +650,19 @@ export const db = {
     const services = get<Service[]>(KEYS.SERVICES, defaultServices);
 
     return list
-      .filter(item => item.company_id === companyId)
+      .filter(item => 
+        !companyId || 
+        item.company_id === companyId || 
+        item.company_id.startsWith('virtual-') ||
+        companyId === DEFAULT_COMPANY_ID ||
+        item.company_id === DEFAULT_COMPANY_ID
+      )
       .map(apt => ({
         ...apt,
-        client: clients.find(c => c.id === apt.client_id),
-        professional: professionals.find(p => p.id === apt.professional_id),
-        service: services.find(s => s.id === apt.service_id),
+        company_id: companyId || DEFAULT_COMPANY_ID,
+        client: clients.find(c => c.id === apt.client_id) || apt.client,
+        professional: professionals.find(p => p.id === apt.professional_id) || apt.professional,
+        service: services.find(s => s.id === apt.service_id) || apt.service,
       }));
   },
   saveAppointments: (items: Appointment[]) => set(KEYS.APPOINTMENTS, items),
@@ -839,28 +846,17 @@ export const db = {
     found = companies.find(c => c.name?.toLowerCase().replace(/[^a-z0-9]/g, '-') === normalizedSlug);
     if (found) return found;
 
-    // 3. Dynamic Virtual Fallback: Ensures link works on ANY device/phone even if localStorage is empty on that device!
-    if (normalizedSlug) {
-      const baseCompany = companies[0] || defaultCompanies[0];
-      const rawName = normalizedSlug
-        .replace(/[-_]/g, ' ')
-        .replace(/\b\w/g, l => l.toUpperCase());
-
-      const formattedName = rawName.toLowerCase().includes('barbe') ? rawName : `Barbearia ${rawName}`;
-
-      return {
-        ...baseCompany,
-        id: `virtual-${normalizedSlug}`,
-        name: formattedName,
-        slug: normalizedSlug,
-      };
-    }
+    // 3. Main registered company fallback to ensure 100% ID synchronization across devices
+    const current = get<Company | null>(KEYS.CURRENT_COMPANY, null);
+    if (current) return current;
 
     return companies[0] || defaultCompanies[0];
   },
 
   addClient: (client: Client): Client => {
     const list = get<Client[]>(KEYS.CLIENTS, defaultClients);
+    const mainComp = get<Company | null>(KEYS.CURRENT_COMPANY, defaultCompanies[0]);
+    if (mainComp) client.company_id = mainComp.id;
     list.push(client);
     set(KEYS.CLIENTS, list);
     return client;
@@ -868,8 +864,14 @@ export const db = {
 
   addAppointment: (appointment: Appointment): Appointment => {
     const list = get<Appointment[]>(KEYS.APPOINTMENTS, defaultAppointments);
+    const mainComp = get<Company | null>(KEYS.CURRENT_COMPANY, defaultCompanies[0]);
+    if (mainComp) appointment.company_id = mainComp.id;
     list.push(appointment);
     set(KEYS.APPOINTMENTS, list);
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('domus_appointment_created'));
+    }
     return appointment;
   },
 

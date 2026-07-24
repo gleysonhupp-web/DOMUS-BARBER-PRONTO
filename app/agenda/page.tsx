@@ -44,6 +44,18 @@ export default function AgendaPage() {
     if (c) {
       loadData(c.id);
       setIsAgendaOpen(db.getAgendaStatus(c.id));
+
+      const handleRefresh = () => {
+        loadData(c.id);
+      };
+
+      window.addEventListener('domus_appointment_created', handleRefresh);
+      window.addEventListener('storage', handleRefresh);
+
+      return () => {
+        window.removeEventListener('domus_appointment_created', handleRefresh);
+        window.removeEventListener('storage', handleRefresh);
+      };
     }
   }, []);
 
