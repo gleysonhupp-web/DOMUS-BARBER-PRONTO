@@ -26,9 +26,7 @@ export const Sidebar = ({ className }: SidebarProps) => {
   const company = db.getCurrentCompany();
   const currentUser = db.getCurrentUser();
 
-  const members = db.getMembers();
-  const member = members.find(m => m.user_id === currentUser?.id && m.company_id === company?.id);
-  const isCollaborator = member ? member.role_id === 'professional' : false;
+  const isCollaborator = db.checkIsCollaborator(currentUser, company?.id || 'c1111111-1111-1111-1111-111111111111');
 
   const menuItems = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },

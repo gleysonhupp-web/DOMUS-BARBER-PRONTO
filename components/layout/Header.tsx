@@ -30,10 +30,8 @@ export const Header = () => {
   const user = db.getCurrentUser();
   const company = db.getCurrentCompany();
 
-  // Find member role
-  const members = db.getMembers();
-  const currentMember = user ? members.find(m => m.user_id === user.id && m.company_id === company?.id) : null;
-  const roleName = currentMember ? currentMember.role_id : 'guest';
+  const isCollaborator = db.checkIsCollaborator(user, company?.id || 'c1111111-1111-1111-1111-111111111111');
+  const roleName = isCollaborator ? 'professional' : 'owner';
 
   // Notifications State
   const [showNotifications, setShowNotifications] = useState(false);

@@ -583,6 +583,39 @@ export const db = {
     set(KEYS.CURRENT_USER, user);
   },
 
+  checkIsCollaborator: (user: UserProfile | null, companyId: string): boolean => {
+    if (!user) return false;
+
+    // 1. Check member role in company_members
+    const members = get<CompanyMember[]>(KEYS.MEMBERS, defaultMembers);
+    const member = members.find(m => m.user_id === user.id && m.company_id === companyId);
+    if (member) {
+      if (member.role_id === 'professional') return true;
+      if (member.role_id === 'owner' || member.role_id === 'admin') return false;
+    }
+
+    // 2. Check professional record matching email or name
+    const profs = get<Professional[]>(KEYS.PROFESSIONALS, defaultProfessionals).filter(p => p.company_id === companyId);
+    const prof = profs.find(p => 
+      (p.user_id && p.user_id === user.id) ||
+      (p.email && p.email.toLowerCase() === user.email.toLowerCase()) || 
+      p.name.toLowerCase() === user.full_name.toLowerCase()
+    );
+
+    if (prof) {
+      return !prof.is_leader;
+    }
+
+    // 3. Main owner check by email
+    const gestorEmails = ['admin@domusbarber.com.br', 'gustavo', 'arthur'];
+    if (gestorEmails.some(e => user.email.toLowerCase().includes(e) || user.full_name.toLowerCase().includes(e))) {
+      return false;
+    }
+
+    // Default: If not main gestor, treat as collaborator
+    return true;
+  },
+
   getCurrentCompany: (): Company | null => {
     return get<Company | null>(KEYS.CURRENT_COMPANY, defaultCompanies[0]);
   },

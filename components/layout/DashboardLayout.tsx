@@ -43,9 +43,7 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
         // RBAC Role Check
         const currentUser = db.getCurrentUser();
         if (currentUser) {
-          const members = db.getMembers();
-          const member = members.find(m => m.user_id === currentUser.id && m.company_id === company.id);
-          const isCollaborator = member ? member.role_id === 'professional' : false;
+          const isCollaborator = db.checkIsCollaborator(currentUser, company.id);
 
           if (isCollaborator) {
             const allowedRoutes = ['/agenda', '/metas'];

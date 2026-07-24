@@ -39,9 +39,7 @@ export default function MetasPage() {
   ];
 
   const currentUser = db.getCurrentUser();
-  const members = db.getMembers();
-  const member = members.find(m => m.user_id === currentUser?.id && m.company_id === companyId);
-  const isCollaborator = member ? member.role_id === 'professional' : false;
+  const isCollaborator = db.checkIsCollaborator(currentUser, companyId);
   const isGestor = !isCollaborator;
 
   // Find matching professional for collaborator
