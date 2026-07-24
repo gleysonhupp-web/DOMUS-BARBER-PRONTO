@@ -7,8 +7,16 @@ import { usePathname } from 'next/navigation';
 import { cn } from '../../lib/utils';
 import { LayoutDashboard, Calendar, Users, DollarSign, MessageSquareCode } from 'lucide-react';
 
+import { db } from '../../services/db';
+
 export const BottomNav = () => {
   const pathname = usePathname();
+  const company = db.getCurrentCompany();
+  const currentUser = db.getCurrentUser();
+
+  const members = db.getMembers();
+  const member = members.find(m => m.user_id === currentUser?.id && m.company_id === company?.id);
+  const isCollaborator = member ? member.role_id === 'professional' : false;
 
   const mobileLinks = [
     { name: 'Painel', href: '/dashboard', icon: LayoutDashboard },
@@ -16,7 +24,12 @@ export const BottomNav = () => {
     { name: 'Clientes', href: '/clientes', icon: Users },
     { name: 'Finanças', href: '/financeiro', icon: DollarSign },
     { name: 'Whats', href: '/whatsapp', icon: MessageSquareCode },
-  ];
+  ].filter(link => {
+    if (isCollaborator) {
+      return link.href === '/agenda' || link.href === '/metas';
+    }
+    return true;
+  });
 
   // Don't show bottom navigation on login/register/onboarding
   const hidePaths = ['/login', '/register', '/onboarding', '/forgot-password'];

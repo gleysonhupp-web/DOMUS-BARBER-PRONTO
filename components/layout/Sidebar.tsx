@@ -24,6 +24,11 @@ export const Sidebar = ({ className }: SidebarProps) => {
   const pathname = usePathname();
   const router = useRouter();
   const company = db.getCurrentCompany();
+  const currentUser = db.getCurrentUser();
+
+  const members = db.getMembers();
+  const member = members.find(m => m.user_id === currentUser?.id && m.company_id === company?.id);
+  const isCollaborator = member ? member.role_id === 'professional' : false;
 
   const menuItems = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -39,7 +44,12 @@ export const Sidebar = ({ className }: SidebarProps) => {
     { name: 'WhatsApp', href: '/whatsapp', icon: MessageSquareCode },
     { name: 'Auto-Atendimento', href: '/ia', icon: Brain },
     { name: 'Configurações', href: '/configuracoes', icon: Settings },
-  ];
+  ].filter(item => {
+    if (isCollaborator) {
+      return item.href === '/agenda' || item.href === '/metas';
+    }
+    return true;
+  });
 
   const handleLogout = async () => {
     await authService.signOut();

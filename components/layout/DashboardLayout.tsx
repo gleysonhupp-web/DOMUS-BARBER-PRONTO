@@ -40,6 +40,23 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
       }
 
       if (company) {
+        // RBAC Role Check
+        const currentUser = db.getCurrentUser();
+        if (currentUser) {
+          const members = db.getMembers();
+          const member = members.find(m => m.user_id === currentUser.id && m.company_id === company.id);
+          const isCollaborator = member ? member.role_id === 'professional' : false;
+
+          if (isCollaborator) {
+            const allowedRoutes = ['/agenda', '/metas'];
+            if (!allowedRoutes.includes(pathname)) {
+              router.push('/agenda');
+              setLoading(false);
+              return;
+            }
+          }
+        }
+
         // Check subscription logic
         const subs = db.getSubscriptions(company.id);
         if (subs && subs.length > 0) {

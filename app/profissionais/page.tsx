@@ -13,7 +13,7 @@ import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import Card from '../../components/ui/Card';
 import { Avatar } from '../../components/ui/Avatar';
-import { Plus, User, Percent, Pencil, Trash2, AlertTriangle, Camera } from 'lucide-react';
+import { Plus, User, Percent, Pencil, Trash2, AlertTriangle, Camera, Key, Lock, Shield, Copy, MessageSquare, Check, Eye, EyeOff, Crown } from 'lucide-react';
 
 export default function ProfissionaisPage() {
   const { toast } = useToast();
@@ -25,6 +25,15 @@ export default function ProfissionaisPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProf, setEditingProf] = useState<any | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
+
+  // Credential Modal State
+  const [isCredentialModalOpen, setIsCredentialModalOpen] = useState(false);
+  const [credentialProf, setCredentialProf] = useState<any | null>(null);
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('123456');
+  const [loginRole, setLoginRole] = useState<'professional' | 'owner'>('professional');
+  const [showPassword, setShowPassword] = useState(false);
+  const [copiedText, setCopiedText] = useState(false);
 
   // Form states
   const [name, setName] = useState('');
@@ -40,6 +49,145 @@ export default function ProfissionaisPage() {
   }, [companyId]);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  const openCredentialModal = (prof: any) => {
+    setCredentialProf(prof);
+    
+    // Check if user already exists
+    const profiles = db.getProfiles();
+    const existingUser = profiles.find(p => p.email.toLowerCase() === (prof.email || '').toLowerCase() || p.full_name === prof.name);
+    
+    const formattedEmail = existingUser?.email || prof.email || `${prof.name.toLowerCase().replace(/[^a-z0-9]/g, '')}@${company?.slug || 'domusbarber'}.com`;
+    setLoginEmail(formattedEmail);
+    
+    // Check existing stored password or default
+    if (typeof window !== 'undefined') {
+      const storedPasswords = JSON.parse(localStorage.getItem('domus_passwords') || '{}');
+      setLoginPassword(storedPasswords[formattedEmail.toLowerCase()] || '123456');
+    } else {
+      setLoginPassword('123456');
+    }
+
+    // Check existing member role
+    const members = db.getMembers();
+    const member = members.find(m => m.user_id === existingUser?.id && m.company_id === companyId);
+    if (member?.role_id === 'owner' || member?.role_id === 'admin' || prof.is_leader) {
+      setLoginRole('owner');
+    } else {
+      setLoginRole('professional');
+    }
+
+    setIsCredentialModalOpen(true);
+  };
+
+  const handleSaveCredentials = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!companyId || !credentialProf) return;
+
+    if (!loginEmail || !loginPassword) {
+      toast('E-mail e senha são obrigatórios.', 'warning', 'Atenção');
+      return;
+    }
+
+    // 1. Find or Create User Profile
+    const profiles = db.getProfiles();
+    let user = profiles.find(p => p.email.toLowerCase() === loginEmail.toLowerCase());
+    
+    if (!user) {
+      user = {
+        id: `u-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        email: loginEmail.toLowerCase(),
+        full_name: credentialProf.name,
+        phone: credentialProf.phone || '',
+        avatar_url: credentialProf.avatar_url || null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      profiles.push(user);
+      db.saveProfiles(profiles);
+    }
+
+    // 2. Save Password in localStorage (domus_passwords)
+    if (typeof window !== 'undefined') {
+      const storedPasswords = JSON.parse(localStorage.getItem('domus_passwords') || '{}');
+      storedPasswords[loginEmail.toLowerCase()] = loginPassword;
+      localStorage.setItem('domus_passwords', JSON.stringify(storedPasswords));
+    }
+
+    // 3. Save / Update Company Member Membership
+    const members = db.getMembers();
+    const existingMemberIdx = members.findIndex(m => m.user_id === user.id && m.company_id === companyId);
+    
+    const memberRole = loginRole; // 'owner' or 'professional'
+    
+    if (existingMemberIdx !== -1) {
+      members[existingMemberIdx].role_id = memberRole;
+      members[existingMemberIdx].status = 'active';
+    } else {
+      members.push({
+        id: `m-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        company_id: companyId,
+        user_id: user.id,
+        role_id: memberRole,
+        status: 'active',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
+    }
+    db.saveMembers(members);
+
+    // 4. Update Professional Record (is_leader & email)
+    const allProfs = db.getProfessionals(companyId);
+    const updatedProfs = allProfs.map(p => 
+      p.id === credentialProf.id 
+        ? { 
+            ...p, 
+            user_id: user.id,
+            email: loginEmail, 
+            is_leader: loginRole === 'owner', 
+            updated_at: new Date().toISOString() 
+          } 
+        : p
+    );
+    db.saveProfessionals(updatedProfs);
+
+    db.logAudit(companyId, db.getCurrentUser()?.id || null, 'barber_login_created', { 
+      barber: credentialProf.name, 
+      email: loginEmail, 
+      role: loginRole === 'owner' ? 'Gestor' : 'Colaborador' 
+    });
+
+    toast(`Credenciais de "${credentialProf.name}" salvas com sucesso!`, 'success', 'Acesso Configurado');
+    setIsCredentialModalOpen(false);
+    loadData();
+  };
+
+  const handleCopyAccess = () => {
+    const text = `💈 *ACESSO PAINEL DOMUS BARBER*\n\n*Profissional:* ${credentialProf?.name}\n*Link de Acesso:* https://domus-barber-pronto.vercel.app/login\n*E-mail:* ${loginEmail}\n*Senha:* ${loginPassword}\n*Permissão:* ${loginRole === 'owner' ? '👑 Gestor (Painel Completo)' : '💈 Colaborador (Agenda & Metas)'}`;
+    navigator.clipboard.writeText(text);
+    setCopiedText(true);
+    toast('Dados de acesso copiados para a área de transferência!', 'success', 'Copiado');
+    setTimeout(() => setCopiedText(false), 3000);
+  };
+
+  const handleSendWhatsAppAccess = () => {
+    const rawPhone = credentialProf?.phone ? credentialProf.phone.replace(/[^0-9]/g, '') : '';
+    const text = encodeURIComponent(`Olá ${credentialProf?.name}! 💈\n\nAqui estão seus dados de acesso ao painel do *DOMUS BARBER*:\n\n🔗 *Link de Login:* https://domus-barber-pronto.vercel.app/login\n📧 *E-mail:* ${loginEmail}\n🔑 *Senha:* ${loginPassword}\n🛡️ *Nível de Acesso:* ${loginRole === 'owner' ? 'Gestor (Acesso Completo)' : 'Barbeiro Colaborador (Agenda & Metas)'}\n\nAbra o link para acessar sua agenda e metas!`);
+    
+    if (rawPhone) {
+      window.open(`https://wa.me/55${rawPhone}?text=${text}`, '_blank');
+    } else {
+      window.open(`https://wa.me/?text=${text}`, '_blank');
+    }
+  };
+
+  const handleGenerateRandomPassword = () => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+    let pass = '';
+    for (let i = 0; i < 8; i++) pass += chars.charAt(Math.floor(Math.random() * chars.length));
+    setLoginPassword(pass);
+    toast('Nova senha gerada!', 'info', 'Senha');
+  };
 
   const openAddModal = () => {
     setEditingProf(null);
@@ -201,7 +349,16 @@ export default function ProfissionaisPage() {
                       </Badge>
                     </td>
                     <td className="px-4 py-3.5">
-                      <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => openCredentialModal(prof)}
+                          className="px-2.5 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500/20 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+                          title="Criar / Gerenciar Login de Acesso"
+                        >
+                          <Key className="w-3.5 h-3.5" />
+                          <span className="hidden sm:inline">Criar Login</span>
+                        </button>
+
                         <button
                           onClick={() => openEditModal(prof)}
                           className="p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all cursor-pointer"
@@ -385,6 +542,157 @@ export default function ProfissionaisPage() {
             </button>
           </div>
         </div>
+      </Modal>
+
+      {/* Modal de Gestão de Logins e Acessos dos Colaboradores */}
+      <Modal
+        isOpen={isCredentialModalOpen}
+        onClose={() => setIsCredentialModalOpen(false)}
+        title="🔑 Criar / Editar Login de Acesso"
+        description="Defina os dados de login e o nível de permissão do barbeiro no painel."
+      >
+        <form onSubmit={handleSaveCredentials} className="flex flex-col gap-4 text-left pt-2">
+          
+          {/* Header Info Card */}
+          <div className="flex items-center gap-3 p-3 rounded-2xl bg-[#242730] border border-border/40">
+            <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shrink-0 overflow-hidden">
+              {credentialProf?.avatar_url ? (
+                <img src={credentialProf.avatar_url} alt={credentialProf.name} className="w-full h-full object-cover" />
+              ) : (
+                <User className="w-6 h-6 text-amber-400" />
+              )}
+            </div>
+            <div>
+              <h4 className="font-extrabold text-foreground text-sm">{credentialProf?.name}</h4>
+              <p className="text-xs text-muted-foreground">{credentialProf?.phone || 'Telefone não cadastrado'}</p>
+            </div>
+          </div>
+
+          {/* Permissão de Acesso (RBAC) */}
+          <div>
+            <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest block mb-1.5">
+              NÍVEL DE PERMISSÃO NO PAINEL
+            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setLoginRole('professional')}
+                className={`p-3.5 rounded-2xl border text-left flex flex-col gap-1 transition-all cursor-pointer ${
+                  loginRole === 'professional'
+                    ? 'bg-amber-500/10 border-amber-500 text-amber-300 shadow-md shadow-amber-950/20'
+                    : 'bg-[#242730] border-border/40 text-muted-foreground hover:bg-[#2A2D37]'
+                }`}
+              >
+                <div className="flex items-center justify-between font-bold text-xs">
+                  <span className="flex items-center gap-1.5"><Shield className="w-3.5 h-3.5 text-amber-400" /> Colaborador</span>
+                  {loginRole === 'professional' && <Check className="w-4 h-4 text-amber-400" />}
+                </div>
+                <p className="text-[10px] opacity-80 leading-relaxed">
+                  Acesso <strong>Restrito</strong> apenas às abas de <strong>Agenda</strong> e <strong>Metas & XP</strong>.
+                </p>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setLoginRole('owner')}
+                className={`p-3.5 rounded-2xl border text-left flex flex-col gap-1 transition-all cursor-pointer ${
+                  loginRole === 'owner'
+                    ? 'bg-purple-500/10 border-purple-500 text-purple-300 shadow-md shadow-purple-950/20'
+                    : 'bg-[#242730] border-border/40 text-muted-foreground hover:bg-[#2A2D37]'
+                }`}
+              >
+                <div className="flex items-center justify-between font-bold text-xs">
+                  <span className="flex items-center gap-1.5"><Crown className="w-3.5 h-3.5 text-purple-400" /> Gestor</span>
+                  {loginRole === 'owner' && <Check className="w-4 h-4 text-purple-400" />}
+                </div>
+                <p className="text-[10px] opacity-80 leading-relaxed">
+                  Acesso <strong>Total</strong> a todo o painel (Financeiro, Clientes, Assinaturas, Estoque...).
+                </p>
+              </button>
+            </div>
+          </div>
+
+          {/* E-mail de Login */}
+          <div>
+            <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest block mb-1.5">
+              E-MAIL DE LOGIN DO BARBEIRO
+            </label>
+            <input
+              type="email"
+              placeholder="barbeiro@domusbarber.com"
+              value={loginEmail}
+              onChange={e => setLoginEmail(e.target.value)}
+              className="w-full bg-[#242730] border border-border/40 text-foreground text-sm rounded-2xl px-4 py-3.5 font-bold outline-none focus:border-amber-500/50 transition-all font-mono"
+              required
+            />
+          </div>
+
+          {/* Senha de Acesso */}
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest block">
+                SENHA DE ACESSO
+              </label>
+              <button
+                type="button"
+                onClick={handleGenerateRandomPassword}
+                className="text-[10px] font-bold text-amber-400 hover:underline cursor-pointer"
+              >
+                ⚡ Gerar Senha
+              </button>
+            </div>
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                placeholder="123456"
+                value={loginPassword}
+                onChange={e => setLoginPassword(e.target.value)}
+                className="w-full bg-[#242730] border border-border/40 text-foreground text-sm rounded-2xl px-4 py-3.5 font-bold outline-none focus:border-amber-500/50 transition-all font-mono pr-12"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer p-1"
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
+
+          {/* Link de Login Preview Card */}
+          <div className="p-3.5 rounded-2xl bg-secondary/30 border border-border/30 text-xs flex flex-col gap-1">
+            <span className="text-[10px] font-bold text-muted-foreground uppercase">Link para o Barbeiro Fazer Login:</span>
+            <span className="font-mono text-amber-400 font-bold select-all break-all">https://domus-barber-pronto.vercel.app/login</span>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex flex-col sm:flex-row items-center gap-2 mt-2">
+            <button
+              type="button"
+              onClick={handleCopyAccess}
+              className="w-full sm:w-1/2 py-3 rounded-xl border border-border/60 bg-[#242730] hover:bg-[#2F333E] text-foreground font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
+            >
+              {copiedText ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4 text-amber-400" />}
+              {copiedText ? 'Copiado!' : 'Copiar Acesso'}
+            </button>
+
+            <button
+              type="button"
+              onClick={handleSendWhatsAppAccess}
+              className="w-full sm:w-1/2 py-3 rounded-xl border border-green-500/40 bg-green-500/10 hover:bg-green-500/20 text-green-400 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
+            >
+              <MessageSquare className="w-4 h-4" /> Enviar WhatsApp
+            </button>
+          </div>
+
+          <button
+            type="submit"
+            className="w-full py-4 rounded-2xl bg-gradient-to-r from-[#B86D43] via-[#D28859] to-[#9E5732] hover:brightness-110 active:scale-[0.99] text-white font-black text-sm tracking-widest uppercase transition-all shadow-xl shadow-amber-950/40 cursor-pointer mt-2"
+          >
+            SALVAR LOGIN E PERMISSÕES
+          </button>
+        </form>
       </Modal>
     </DashboardLayout>
   );
