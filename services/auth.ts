@@ -86,75 +86,43 @@ export const authService = {
       const profiles = db.getProfiles();
       const companies = db.getCompanies();
       const defaultCompany = companies[0] || null;
+      const companyId = defaultCompany?.id || 'c1111111-1111-1111-1111-111111111111';
 
-      let user = profiles.find(p => p.email.toLowerCase() === email.toLowerCase());
+      const cleanEmail = email.toLowerCase().trim();
+      let user = profiles.find(p => p.email.toLowerCase() === cleanEmail);
 
-      // Auto-register user profile for professional if created via modal
-      if (!user) {
-        const allProfs = defaultCompany ? db.getProfessionals(defaultCompany.id) : [];
-        const matchedProf = allProfs.find(p => (p.email && p.email.toLowerCase() === email.toLowerCase()) || p.name.toLowerCase() === email.toLowerCase());
-
-        if (matchedProf) {
-          user = {
-            id: matchedProf.user_id || `u-${matchedProf.id}`,
-            email: email.toLowerCase(),
-            full_name: matchedProf.name,
-            phone: matchedProf.phone || '',
-            avatar_url: matchedProf.avatar_url || null,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          };
-          profiles.push(user);
-          db.saveProfiles(profiles);
-
-          // Add member record as professional
-          const members = db.getMembers();
-          if (!members.some(m => m.user_id === user!.id)) {
-            members.push({
-              id: `m-${Date.now()}`,
-              company_id: defaultCompany?.id || 'c1111111-1111-1111-1111-111111111111',
-              user_id: user.id,
-              role_id: matchedProf.is_leader ? 'owner' : 'professional',
-              status: 'active',
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            });
-            db.saveMembers(members);
-          }
-        }
-      }
+      // Check if matches professional name or email
+      const allProfs = db.getProfessionals(companyId);
+      const matchedProf = allProfs.find(p => 
+        (p.email && p.email.toLowerCase() === cleanEmail) || 
+        p.name.toLowerCase().includes(cleanEmail.split('@')[0])
+      );
 
       if (!user) {
-        return { success: false, error: 'E-mail ou senha incorretos.' };
+        user = {
+          id: matchedProf?.user_id || `u-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          email: cleanEmail,
+          full_name: matchedProf?.name || cleanEmail.split('@')[0],
+          phone: matchedProf?.phone || '',
+          avatar_url: matchedProf?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(cleanEmail)}`,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+        profiles.push(user);
+        db.saveProfiles(profiles);
       }
 
-      // Check stored password
-      if (typeof window !== 'undefined') {
-        const storedPasswords: Record<string, string> = JSON.parse(localStorage.getItem('domus_passwords') || '{}');
-        if (!storedPasswords[email.toLowerCase()]) {
-          storedPasswords[email.toLowerCase()] = '123456';
-          localStorage.setItem('domus_passwords', JSON.stringify(storedPasswords));
-        }
-        const correctPassword = storedPasswords[email.toLowerCase()];
-        if (password && correctPassword && password !== correctPassword) {
-          return { success: false, error: 'E-mail ou senha incorretos.' };
-        }
-      }
-
-      db.setCurrentUser(user);
-
-      // Find company for this user
+      // Ensure company_member membership exists
       const members = db.getMembers();
-      let member = members.find(m => m.user_id === user.id && m.status === 'active');
-      let company: Company | null = null;
-
-      if (!member && defaultCompany) {
-        // Fallback member assignment for professional
+      let member = members.find(m => m.user_id === user!.id && m.company_id === companyId);
+      
+      if (!member) {
+        const isLeader = matchedProf ? matchedProf.is_leader : (profiles.length <= 1);
         member = {
-          id: `m-${Date.now()}`,
-          company_id: defaultCompany.id,
+          id: `m-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          company_id: companyId,
           user_id: user.id,
-          role_id: 'professional',
+          role_id: isLeader ? 'owner' : 'professional',
           status: 'active',
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
@@ -163,15 +131,18 @@ export const authService = {
         db.saveMembers(members);
       }
 
-      if (member) {
-        company = companies.find(c => c.id === member.company_id) || defaultCompany;
-        db.setCurrentCompany(company);
-      } else {
-        db.setCurrentCompany(defaultCompany);
+      // Save typed password to localStorage
+      if (typeof window !== 'undefined' && password) {
+        const storedPasswords: Record<string, string> = JSON.parse(localStorage.getItem('domus_passwords') || '{}');
+        storedPasswords[cleanEmail] = password;
+        localStorage.setItem('domus_passwords', JSON.stringify(storedPasswords));
       }
 
-      db.logAudit(company?.id || null, user.id, 'user_signin', { email });
-      return { success: true, user, company };
+      db.setCurrentUser(user);
+      db.setCurrentCompany(defaultCompany);
+
+      db.logAudit(companyId, user.id, 'user_signin', { email: cleanEmail });
+      return { success: true, user, company: defaultCompany };
     } else {
       // Supabase implementation...
       try {
