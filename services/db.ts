@@ -598,10 +598,24 @@ export const db = {
   saveProfiles: (items: UserProfile[]) => set(KEYS.USER_PROFILES, items),
 
   getSubscriptions: (companyId: string): CompanySubscription[] => {
-    const subs = get<CompanySubscription[]>(KEYS.SUBSCRIPTIONS, defaultSubscriptions);
-    return subs.filter(s => s.company_id === companyId);
+    const subs = get<CompanySubscription[]>(KEYS.SUBSCRIPTIONS, []);
+    const found = subs.find(s => s.company_id === companyId);
+    
+    // Always provide active subscription for demo/SaaS workspace
+    const activeSub: CompanySubscription = {
+      id: found?.id || `sub-${companyId}`,
+      company_id: companyId,
+      plan_id: found?.plan_id || 'plan-domus-199',
+      status: 'active',
+      current_period_start: new Date().toISOString(),
+      current_period_end: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+      cancel_at_period_end: false,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    return [activeSub];
   },
-  getAllSubscriptions: (): CompanySubscription[] => get<CompanySubscription[]>(KEYS.SUBSCRIPTIONS, defaultSubscriptions),
+  getAllSubscriptions: (): CompanySubscription[] => get<CompanySubscription[]>(KEYS.SUBSCRIPTIONS, []),
   saveSubscriptions: (items: CompanySubscription[]) => set(KEYS.SUBSCRIPTIONS, items),
 
   getMembers: (): CompanyMember[] => get(KEYS.MEMBERS, defaultMembers),

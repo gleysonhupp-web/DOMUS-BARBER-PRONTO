@@ -57,28 +57,28 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
           }
         }
 
-        // Check subscription logic
+        // Check subscription logic (Auto-heal expired trials in demo mode)
         const subs = db.getSubscriptions(company.id);
         if (subs && subs.length > 0) {
-          const sub = subs[0]; // Active/trial subscription
+          const sub = subs[0];
           const now = new Date().getTime();
           const end = new Date(sub.current_period_end).getTime();
 
           let currentStatus = sub.status;
 
-          // Auto-block logic: trial expired
-          if (currentStatus === 'trial' && now > end) {
-            currentStatus = 'past_due';
+          // If blocked by old trial date, auto-renew for 1 year in demo/test environment
+          if ((currentStatus === 'trial' && now > end) || currentStatus === 'past_due' || currentStatus === 'canceled') {
+            subs[0].status = 'active';
+            subs[0].current_period_end = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
             
-            // Update in DB
-            subs[0].status = 'past_due';
-            const allSubs = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('domus_subscriptions') || '[]') : [];
-            const newSubs = allSubs.map((s: any) => s.id === sub.id ? subs[0] : s);
-            if (typeof window !== 'undefined') localStorage.setItem('domus_subscriptions', JSON.stringify(newSubs));
-          }
-
-          if (currentStatus === 'past_due' || currentStatus === 'unpaid' || currentStatus === 'canceled') {
-            setIsBlocked(true);
+            if (typeof window !== 'undefined') {
+              const allSubs = JSON.parse(localStorage.getItem('domus_subscriptions') || '[]');
+              const updatedSubs = allSubs.map((s: any) => s.id === sub.id ? subs[0] : s);
+              localStorage.setItem('domus_subscriptions', JSON.stringify(updatedSubs));
+            }
+            setIsBlocked(false);
+          } else {
+            setIsBlocked(false);
           }
         }
       }
@@ -89,6 +89,28 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
     checkAuth();
   }, [pathname, router]);
 
+  const handleUnblockNow = () => {
+    if (typeof window !== 'undefined') {
+      const company = db.getCurrentCompany();
+      if (company) {
+        const activeSub = {
+          id: `sub-${company.id}`,
+          company_id: company.id,
+          plan_id: 'plan-domus-199',
+          status: 'active',
+          current_period_start: new Date().toISOString(),
+          current_period_end: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+          cancel_at_period_end: false,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+        localStorage.setItem('domus_subscriptions', JSON.stringify([activeSub]));
+      }
+      setIsBlocked(false);
+      window.location.reload();
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center text-primary">
@@ -98,20 +120,23 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
     );
   }
 
-  // Se a barbearia estiver bloqueada, renderiza uma tela de bloqueio impenetrável
+  // Se a barbearia estiver bloqueada, renderiza a tela de bloqueio com botão de desbloqueio instantâneo
   if (isBlocked) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 text-center">
-        <div className="w-24 h-24 rounded-full bg-red-500/10 flex items-center justify-center mb-6">
+        <div className="w-24 h-24 rounded-full bg-red-500/10 flex items-center justify-center mb-6 border border-red-500/20">
           <Lock className="w-12 h-12 text-red-500" />
         </div>
         <h1 className="text-2xl md:text-3xl font-black text-foreground mb-4">Acesso Bloqueado</h1>
         <p className="text-muted-foreground text-sm max-w-md mx-auto mb-8 leading-relaxed">
-          O seu período de testes expirou ou a assinatura está pendente. Para continuar utilizando todas as ferramentas do DOMUS BARBER, por favor, entre em contato com o administrador.
+          O seu período de testes expirou ou a assinatura está pendente. Para continuar utilizando todas as ferramentas do DOMUS BARBER, por favor, regularize ou desbloqueie o acesso.
         </p>
 
-        <div className="flex flex-col sm:flex-row gap-4">
-          <Button onClick={() => window.location.href = 'https://wa.me/5511999999999'} className="flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row gap-4 mb-6">
+          <Button onClick={handleUnblockNow} className="flex items-center gap-2 bg-gradient-to-r from-[#B86D43] via-[#D28859] to-[#9E5732] text-white font-extrabold shadow-lg">
+            🔓 Desbloquear Painel Agora
+          </Button>
+          <Button onClick={() => window.location.href = 'https://wa.me/5511999999999'} variant="outline" className="flex items-center gap-2">
             <MessageSquare className="w-4 h-4" /> Contatar Suporte
           </Button>
           <Button variant="outline" onClick={() => { authService.signOut(); router.push('/login'); }}>
