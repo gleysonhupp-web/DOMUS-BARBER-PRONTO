@@ -1,7 +1,7 @@
 // app/profissionais/page.tsx
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { PageHeader } from '../../components/ui/DashboardWidgets';
 import { SearchBar } from '../../components/ui/DataTable';
@@ -13,18 +13,34 @@ import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import Card from '../../components/ui/Card';
 import { Avatar } from '../../components/ui/Avatar';
-import { Plus, User, Percent, Pencil, Trash2, AlertTriangle, Camera, Key, Lock, Shield, Copy, MessageSquare, Check, Eye, EyeOff, Crown } from 'lucide-react';
+import { Plus, User, Percent, Pencil, Trash2, AlertTriangle, Camera, Key, Lock, Shield, Copy, MessageSquare, Check, Eye, EyeOff, Crown, Upload } from 'lucide-react';
 
 export default function ProfissionaisPage() {
   const { toast } = useToast();
   const company = db.getCurrentCompany();
   const companyId = company?.id;
 
+  const avatarFileInputRef = useRef<HTMLInputElement>(null);
+
   const [professionals, setProfessionals] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProf, setEditingProf] = useState<any | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
+
+  const handleAvatarFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          setAvatarUrl(event.target.result as string);
+          toast('Foto carregada com sucesso!', 'success', 'Foto do Profissional');
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   // Credential Modal State
   const [isCredentialModalOpen, setIsCredentialModalOpen] = useState(false);
@@ -399,18 +415,38 @@ export default function ProfissionaisPage() {
           
           {/* Avatar Upload Container */}
           <div className="flex flex-col items-center justify-center mb-2">
-            <div className="w-28 h-28 rounded-[2rem] bg-[#2A2D35] flex items-center justify-center relative shadow-xl border border-white/10 cursor-pointer group hover:border-amber-500/40 transition-all overflow-hidden">
+            <input
+              type="file"
+              ref={avatarFileInputRef}
+              onChange={handleAvatarFileSelect}
+              accept="image/*"
+              className="hidden"
+            />
+            <div 
+              onClick={() => avatarFileInputRef.current?.click()}
+              className="w-28 h-28 rounded-[2rem] bg-[#2A2D35] flex items-center justify-center relative shadow-xl border border-amber-500/30 cursor-pointer group hover:border-amber-500 hover:scale-[1.03] transition-all overflow-hidden"
+              title="Clique para escolher uma foto do seu computador/celular"
+            >
               {avatarUrl ? (
                 <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
               ) : (
-                <div className="w-full h-full flex items-center justify-center bg-[#2A2D35]">
-                  <User className="w-10 h-10 text-muted-foreground/50" />
+                <div className="w-full h-full flex flex-col items-center justify-center bg-[#2A2D35] text-muted-foreground/60 group-hover:text-amber-400 transition-colors">
+                  <User className="w-10 h-10 mb-1" />
                 </div>
               )}
-              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 px-2.5 py-1 rounded-full bg-black/80 border border-white/10 flex items-center justify-center text-white">
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 px-2.5 py-1 rounded-full bg-black/80 border border-white/20 flex items-center justify-center text-amber-400 group-hover:bg-amber-500 group-hover:text-black transition-all shadow-md">
                 <Camera className="w-3.5 h-3.5" />
               </div>
             </div>
+            
+            <button
+              type="button"
+              onClick={() => avatarFileInputRef.current?.click()}
+              className="text-[11px] font-bold text-amber-400 hover:underline mt-2 flex items-center gap-1 cursor-pointer"
+            >
+              <Upload className="w-3 h-3" />
+              <span>{avatarUrl ? 'Alterar foto de perfil' : 'Escolher foto de perfil'}</span>
+            </button>
           </div>
 
           {/* Field 1: NOME (APARECERÁ NA AGENDA) */}

@@ -1,7 +1,7 @@
 // app/configuracoes/page.tsx
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { PageHeader, SectionHeader } from '../../components/ui/DashboardWidgets';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../components/ui/Tabs';
@@ -13,12 +13,28 @@ import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import Card, { CardHeader, CardTitle, CardDescription, CardContent } from '../../components/ui/Card';
 import { Avatar } from '../../components/ui/Avatar';
-import { Building, Shield, CreditCard, Users, History, FileLock, UserCheck, Camera } from 'lucide-react';
+import { Building, Shield, CreditCard, Users, History, FileLock, UserCheck, Camera, Upload } from 'lucide-react';
 import { formatCurrency } from '../../lib/utils';
 
 export default function ConfiguracoesPage() {
   const { toast } = useToast();
   const company = db.getCurrentCompany();
+
+  const logoFileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleLogoFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          setLogoUrl(event.target.result as string);
+          toast('Logotipo carregado com sucesso!', 'success', 'Logotipo');
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
   const user = db.getCurrentUser();
 
   const [companyName, setCompanyName] = useState('');
@@ -231,13 +247,33 @@ export default function ConfiguracoesPage() {
                 
                 {/* Camera Logo Upload Header */}
                 <div className="flex flex-col items-center justify-center mb-2">
-                  <div className="w-16 h-16 rounded-full bg-[#2A2D35] flex items-center justify-center relative shadow-xl border border-white/10 cursor-pointer group hover:border-amber-500/40 transition-all overflow-hidden">
+                  <input
+                    type="file"
+                    ref={logoFileInputRef}
+                    onChange={handleLogoFileSelect}
+                    accept="image/*"
+                    className="hidden"
+                  />
+                  <div 
+                    onClick={() => logoFileInputRef.current?.click()}
+                    className="w-20 h-20 rounded-full bg-[#2A2D35] flex items-center justify-center relative shadow-xl border border-amber-500/30 cursor-pointer group hover:border-amber-500 hover:scale-[1.04] transition-all overflow-hidden"
+                    title="Clique para escolher a logomarca da barbearia"
+                  >
                     {logoUrl ? (
                       <img src={logoUrl} alt="Logo" className="w-full h-full object-cover" />
                     ) : (
-                      <Camera className="w-6 h-6 text-white" />
+                      <Camera className="w-8 h-8 text-amber-400 group-hover:scale-110 transition-transform" />
                     )}
                   </div>
+                  
+                  <button
+                    type="button"
+                    onClick={() => logoFileInputRef.current?.click()}
+                    className="text-[11px] font-bold text-amber-400 hover:underline mt-2 flex items-center gap-1 cursor-pointer"
+                  >
+                    <Upload className="w-3 h-3" />
+                    <span>{logoUrl ? 'Alterar logomarca' : 'Escolher logomarca da barbearia'}</span>
+                  </button>
                 </div>
 
                 {/* Field 1: NOME FANTASIA */}
