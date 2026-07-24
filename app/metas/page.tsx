@@ -24,10 +24,57 @@ export default function MetasPage() {
   const user = db.getCurrentUser();
   const companyId = company?.id ?? 'c1111111-1111-1111-1111-111111111111';
 
-  const [goalData, setGoalData] = useState(() => db.getBarberGoal(companyId));
+  const professionals = db.getProfessionals(companyId);
+  const [selectedProfId, setSelectedProfId] = useState<string>(() => {
+    return professionals[0]?.id || 'p-1';
+  });
+
   const [missions, setMissions] = useState(() => db.getDailyMissions(companyId));
   const [rewards] = useState(() => db.getRewardItems(companyId));
   const [activeTab, setActiveTab] = useState('overview');
+
+  // Dynamic goal calculation per selected barber
+  const selectedProf = professionals.find(p => p.id === selectedProfId) || professionals[0];
+  
+  const getGoalDataForProf = (profId: string) => {
+    const prof = professionals.find(p => p.id === profId);
+    const baseGoal = db.getBarberGoal(companyId);
+
+    // Realistic per-barber goal stats seed
+    const mockPerProf: Record<string, Partial<any>> = {
+      'p-1': { level: 18, level_title: 'Master Barber', xp: 8450, next_level_xp: 10000, monthly_revenue_current: 8730, monthly_revenue_target: 12000, ranking_position: 2, streak_days: 15, domus_index: 865 },
+      'p-2': { level: 22, level_title: 'Legend Barber', xp: 14200, next_level_xp: 15000, monthly_revenue_current: 11850, monthly_revenue_target: 12000, ranking_position: 1, streak_days: 28, domus_index: 945 },
+      'p-3': { level: 14, level_title: 'Barbeiro Sênior', xp: 5900, next_level_xp: 7000, monthly_revenue_current: 6400, monthly_revenue_target: 8500, ranking_position: 3, streak_days: 12, domus_index: 820 },
+      'p-4': { level: 9, level_title: 'Barbeiro Pro', xp: 3100, next_level_xp: 4500, monthly_revenue_current: 4900, monthly_revenue_target: 7000, ranking_position: 4, streak_days: 7, domus_index: 760 },
+    };
+
+    const custom = mockPerProf[profId] || {
+      level: 12,
+      level_title: 'Barbeiro Sênior',
+      xp: 4800,
+      next_level_xp: 6000,
+      monthly_revenue_current: 7500,
+      monthly_revenue_target: 10000,
+      ranking_position: 3,
+      streak_days: 10,
+      domus_index: 830
+    };
+
+    return {
+      ...baseGoal,
+      ...custom,
+      profName: prof?.name || 'Gustavo',
+      profAvatar: prof?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(prof?.name || 'barber')}`,
+      profRole: prof?.is_leader ? 'PROPRIETÁRIO / LÍDER' : 'BARBEIRO DA EQUIPE'
+    };
+  };
+
+  const [perProfOverrides, setPerProfOverrides] = useState<Record<string, any>>({});
+  
+  const currentGoalData = {
+    ...getGoalDataForProf(selectedProfId),
+    ...(perProfOverrides[selectedProfId] || {})
+  };
 
   const handleToggleMission = (id: string) => {
     const updated = db.toggleDailyMission(companyId, id);
@@ -35,49 +82,102 @@ export default function MetasPage() {
 
     const mission = updated.find(m => m.id === id);
     if (mission?.completed) {
-      // Add XP & coins to goals
-      const newXp = goalData.xp + mission.xp_reward;
-      const newCoins = goalData.coins + Math.floor(mission.xp_reward / 2);
-      const newGoal = { ...goalData, xp: newXp, coins: newCoins };
-      setGoalData(newGoal);
-      db.saveBarberGoal(newGoal);
+      const newXp = currentGoalData.xp + mission.xp_reward;
+      const newCoins = currentGoalData.coins + Math.floor(mission.xp_reward / 2);
+      
+      setPerProfOverrides(prev => ({
+        ...prev,
+        [selectedProfId]: {
+          ...(prev[selectedProfId] || {}),
+          xp: newXp,
+          coins: newCoins
+        }
+      }));
 
-      toast(`Missão concluída! +${mission.xp_reward} XP e +${Math.floor(mission.xp_reward / 2)} Coins adicionados!`, 'success', '🎯 Meta Batida!');
+      toast(`Missão de ${currentGoalData.profName} concluída! +${mission.xp_reward} XP e +${Math.floor(mission.xp_reward / 2)} Coins!`, 'success', '🎯 Meta Batida!');
     }
   };
 
   const handleRedeemReward = (rewardTitle: string, cost: number) => {
-    if (goalData.coins < cost) {
+    if (currentGoalData.coins < cost) {
       toast(`Você precisa de ${cost} Coins para resgatar este item. Continue cumprindo missões!`, 'warning', 'Coins Insuficientes');
       return;
     }
 
-    const newGoal = { ...goalData, coins: goalData.coins - cost };
-    setGoalData(newGoal);
-    db.saveBarberGoal(newGoal);
+    setPerProfOverrides(prev => ({
+      ...prev,
+      [selectedProfId]: {
+        ...(prev[selectedProfId] || {}),
+        coins: currentGoalData.coins - cost
+      }
+    }));
 
-    toast(`Parabéns! Você resgatou: "${rewardTitle}". A equipe DOMUS entrará em contato para entrega.`, 'success', '🎁 Resgate Confirmado!');
+    toast(`Parabéns! Item resgatado para ${currentGoalData.profName}: "${rewardTitle}".`, 'success', '🎁 Resgate Confirmado!');
   };
 
-  const xpPercent = Math.min(100, Math.round((goalData.xp / goalData.next_level_xp) * 100));
-  const revenuePercent = Math.min(100, Math.round((goalData.monthly_revenue_current / goalData.monthly_revenue_target) * 100));
+  const xpPercent = Math.min(100, Math.round((currentGoalData.xp / currentGoalData.next_level_xp) * 100));
+  const revenuePercent = Math.min(100, Math.round((currentGoalData.monthly_revenue_current / currentGoalData.monthly_revenue_target) * 100));
 
   return (
     <DashboardLayout>
       <PageHeader
         title="Metas & Desempenho"
-        description="Acompanhe suas metas mensais, evolua de nível, cumpra missões diárias e resgate prêmios."
+        description="Acompanhe as metas mensais, pontuação XP e missões diárias de cada barbeiro da equipe."
       />
 
-      {/* Top Banner Profile & XP Header (Mockup #1 & #3 style) */}
+      {/* Barber Selector Bar (Mudar de Barbeiro) */}
+      <div className="mb-6 bg-[#1A1D24] border border-amber-500/30 rounded-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-4 shadow-xl">
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+            <Scissors className="w-5 h-5" />
+          </div>
+          <div>
+            <span className="text-[10px] font-extrabold text-amber-400 uppercase tracking-widest block">MUDAR DE BARBEIRO</span>
+            <div className="text-sm font-bold text-foreground flex items-center gap-2">
+              <span>Visualizando metas de:</span>
+              <strong className="text-amber-400 font-extrabold">{currentGoalData.profName}</strong>
+            </div>
+          </div>
+        </div>
+
+        {/* Barber Buttons Selector */}
+        <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0 scrollbar-none">
+          {professionals.map(prof => {
+            const isSelected = selectedProfId === prof.id;
+            return (
+              <button
+                key={prof.id}
+                onClick={() => {
+                  setSelectedProfId(prof.id);
+                  toast(`Exibindo metas e pontuação de ${prof.name}`, 'info', 'Barbeiro Selecionado');
+                }}
+                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border shrink-0 ${
+                  isSelected
+                    ? 'bg-gradient-to-r from-[#B86D43] via-[#D28859] to-[#9E5732] text-white border-amber-400/50 font-black shadow-lg shadow-amber-950/40 scale-[1.02]'
+                    : 'bg-[#242730] text-muted-foreground border-border/40 hover:bg-[#2F333E] hover:text-foreground'
+                }`}
+              >
+                <img
+                  src={prof.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(prof.name)}`}
+                  alt={prof.name}
+                  className="w-5 h-5 rounded-full object-cover border border-white/20"
+                />
+                <span>{prof.name}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Top Banner Profile & XP Header (Dynamic per Barber) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6 select-none">
         {/* Profile Level Card */}
         <div className="lg:col-span-1 bg-gradient-to-br from-card via-card to-amber-950/20 border border-amber-500/30 rounded-2xl p-5 flex items-center gap-4 relative overflow-hidden shadow-xl">
           <div className="relative shrink-0">
             <div className="w-16 h-16 rounded-full border-2 border-amber-400 p-0.5 overflow-hidden shadow-lg shadow-amber-500/20">
               <img 
-                src={user?.avatar_url || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150"} 
-                alt={user?.full_name || "Igor Ribeiro"} 
+                src={currentGoalData.profAvatar} 
+                alt={currentGoalData.profName} 
                 className="w-full h-full object-cover rounded-full"
               />
             </div>
@@ -90,10 +190,10 @@ export default function MetasPage() {
             <div className="flex items-center gap-1.5">
               <span className="text-xs text-amber-400 font-bold tracking-wider">Fala, Mestre! 👋</span>
             </div>
-            <h3 className="text-lg font-black text-foreground truncate">{user?.full_name || "Igor Ribeiro"}</h3>
+            <h3 className="text-lg font-black text-foreground truncate">{currentGoalData.profName}</h3>
             <div className="flex items-center gap-2 mt-1">
               <Badge variant="primary" className="text-[9px] bg-amber-500/10 text-amber-400 border border-amber-500/30 font-bold px-2">
-                <Crown className="w-3 h-3 mr-1 text-amber-400 inline" /> {goalData.level_title}
+                <Crown className="w-3 h-3 mr-1 text-amber-400 inline" /> {currentGoalData.level_title}
               </Badge>
             </div>
           </div>
@@ -104,19 +204,19 @@ export default function MetasPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 font-black text-lg shadow-inner">
-                {goalData.level}
+                {currentGoalData.level}
               </div>
               <div>
                 <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block">Nível Atual</span>
-                <span className="text-sm font-black text-foreground">NÍVEL {goalData.level} — {goalData.level_title}</span>
+                <span className="text-sm font-black text-foreground">NÍVEL {currentGoalData.level} — {currentGoalData.level_title}</span>
               </div>
             </div>
 
             <div className="text-right">
-              <span className="text-xs font-mono font-black text-amber-400">{goalData.xp.toLocaleString()}</span>
-              <span className="text-xs text-muted-foreground font-mono"> / {goalData.next_level_xp.toLocaleString()} XP</span>
+              <span className="text-xs font-mono font-black text-amber-400">{currentGoalData.xp.toLocaleString()}</span>
+              <span className="text-xs text-muted-foreground font-mono"> / {currentGoalData.next_level_xp.toLocaleString()} XP</span>
               <p className="text-[10px] text-muted-foreground mt-0.5">
-                Faltam <strong className="text-amber-400 font-bold">{(goalData.next_level_xp - goalData.xp).toLocaleString()} XP</strong> para o próximo nível 🚀
+                Faltam <strong className="text-amber-400 font-bold">{(currentGoalData.next_level_xp - currentGoalData.xp).toLocaleString()} XP</strong> para o próximo nível 🚀
               </p>
             </div>
           </div>
@@ -146,14 +246,14 @@ export default function MetasPage() {
             </div>
           </div>
           <div>
-            <div className="text-xl font-black text-foreground font-mono">{formatCurrency(goalData.monthly_revenue_current)}</div>
+            <div className="text-xl font-black text-foreground font-mono">{formatCurrency(currentGoalData.monthly_revenue_current)}</div>
             <div className="flex items-center gap-1.5 text-[10px] text-green-400 font-bold mt-0.5">
               <TrendingUp className="w-3 h-3" /> +12,4% em relação ao mês anterior
             </div>
           </div>
           <div className="mt-3 pt-2 border-t border-border/30">
             <div className="flex justify-between text-[10px] text-muted-foreground mb-1">
-              <span>Meta: {formatCurrency(goalData.monthly_revenue_target)}</span>
+              <span>Meta: {formatCurrency(currentGoalData.monthly_revenue_target)}</span>
               <span className="font-bold text-amber-400">{revenuePercent}%</span>
             </div>
             <div className="w-full bg-secondary h-1.5 rounded-full overflow-hidden">
@@ -171,8 +271,8 @@ export default function MetasPage() {
             </div>
           </div>
           <div>
-            <div className="text-xl font-black text-amber-400 font-mono">{goalData.ranking_position}º lugar</div>
-            <p className="text-[10px] text-muted-foreground mt-0.5">Entre 128 barbeiros da rede</p>
+            <div className="text-xl font-black text-amber-400 font-mono">{currentGoalData.ranking_position}º lugar</div>
+            <p className="text-[10px] text-muted-foreground mt-0.5">Entre {professionals.length || 4} barbeiros da equipe</p>
           </div>
           <button onClick={() => setActiveTab('ranking')} className="mt-3 text-[10px] font-bold text-primary hover:underline flex items-center gap-1 cursor-pointer">
             Ver ranking completo <ChevronRight className="w-3 h-3" />
@@ -188,7 +288,7 @@ export default function MetasPage() {
             </div>
           </div>
           <div>
-            <div className="text-xl font-black text-orange-400 font-mono">{goalData.streak_days} dias</div>
+            <div className="text-xl font-black text-orange-400 font-mono">{currentGoalData.streak_days} dias</div>
             <p className="text-[10px] text-muted-foreground mt-0.5">Batendo meta diária ininterrupta 🔥</p>
           </div>
           <span className="mt-3 text-[10px] font-bold text-muted-foreground">Recorde da barbearia!</span>
@@ -203,7 +303,7 @@ export default function MetasPage() {
             </div>
           </div>
           <div className="flex items-baseline gap-1">
-            <span className="text-2xl font-black text-green-400 font-mono">{goalData.domus_index}</span>
+            <span className="text-2xl font-black text-green-400 font-mono">{currentGoalData.domus_index}</span>
             <span className="text-[10px] text-muted-foreground font-mono">/ 1000</span>
           </div>
           <div className="flex items-center justify-between text-[10px] mt-2">
@@ -222,7 +322,7 @@ export default function MetasPage() {
             <Target className="w-4 h-4" /> Visão Geral & Missões
           </TabsTrigger>
           <TabsTrigger value="store" className="gap-2 text-xs font-bold">
-            <Coins className="w-4 h-4 text-amber-400" /> Loja de Recompensas ({goalData.coins} Coins)
+            <Coins className="w-4 h-4 text-amber-400" /> Loja de Recompensas ({currentGoalData.coins} Coins)
           </TabsTrigger>
           <TabsTrigger value="ranking" className="gap-2 text-xs font-bold">
             <Trophy className="w-4 h-4 text-yellow-400" /> Ranking da Barbearia
@@ -269,7 +369,7 @@ export default function MetasPage() {
                   <div className="ml-4 flex flex-col gap-1 text-left">
                     <span className="text-xs text-muted-foreground">Faltam apenas</span>
                     <span className="text-sm font-black text-amber-400 font-mono">
-                      {formatCurrency(goalData.monthly_revenue_target - goalData.monthly_revenue_current)}
+                      {formatCurrency(currentGoalData.monthly_revenue_target - currentGoalData.monthly_revenue_current)}
                     </span>
                     <span className="text-[10px] text-muted-foreground">para bater sua meta Ouro! 🚀</span>
                   </div>
@@ -284,11 +384,11 @@ export default function MetasPage() {
                         <Scissors className="w-3.5 h-3.5 text-primary" /> Cortes Realizados
                       </span>
                       <span className="font-bold text-foreground font-mono">
-                        {goalData.monthly_cuts_current} / {goalData.monthly_cuts_target}
+                        {currentGoalData.monthly_cuts_current} / {currentGoalData.monthly_cuts_target}
                       </span>
                     </div>
                     <div className="w-full bg-secondary h-2 rounded-full overflow-hidden">
-                      <div className="bg-primary h-full rounded-full" style={{ width: `${(goalData.monthly_cuts_current / goalData.monthly_cuts_target) * 100}%` }} />
+                      <div className="bg-primary h-full rounded-full" style={{ width: `${(currentGoalData.monthly_cuts_current / currentGoalData.monthly_cuts_target) * 100}%` }} />
                     </div>
                   </div>
 
@@ -299,11 +399,11 @@ export default function MetasPage() {
                         <Package className="w-3.5 h-3.5 text-primary" /> Vendas de Produtos
                       </span>
                       <span className="font-bold text-foreground font-mono">
-                        {formatCurrency(goalData.monthly_products_current)} / {formatCurrency(goalData.monthly_products_target)}
+                        {formatCurrency(currentGoalData.monthly_products_current)} / {formatCurrency(currentGoalData.monthly_products_target)}
                       </span>
                     </div>
                     <div className="w-full bg-secondary h-2 rounded-full overflow-hidden">
-                      <div className="bg-primary h-full rounded-full" style={{ width: `${(goalData.monthly_products_current / goalData.monthly_products_target) * 100}%` }} />
+                      <div className="bg-primary h-full rounded-full" style={{ width: `${(currentGoalData.monthly_products_current / currentGoalData.monthly_products_target) * 100}%` }} />
                     </div>
                   </div>
 
@@ -314,11 +414,11 @@ export default function MetasPage() {
                         <Star className="w-3.5 h-3.5 text-primary" /> Avaliações 5 Estrelas
                       </span>
                       <span className="font-bold text-foreground font-mono">
-                        {goalData.monthly_reviews_current} / {goalData.monthly_reviews_target}
+                        {currentGoalData.monthly_reviews_current} / {currentGoalData.monthly_reviews_target}
                       </span>
                     </div>
                     <div className="w-full bg-secondary h-2 rounded-full overflow-hidden">
-                      <div className="bg-primary h-full rounded-full" style={{ width: `${(goalData.monthly_reviews_current / goalData.monthly_reviews_target) * 100}%` }} />
+                      <div className="bg-primary h-full rounded-full" style={{ width: `${(currentGoalData.monthly_reviews_current / currentGoalData.monthly_reviews_target) * 100}%` }} />
                     </div>
                   </div>
                 </div>
@@ -430,7 +530,7 @@ export default function MetasPage() {
                 <CardDescription>Troque seus Coins acumulados por prêmios reais, cursos e cashback na conta!</CardDescription>
               </div>
               <div className="flex items-center gap-2 px-4 py-2 bg-amber-500/10 border border-amber-500/30 rounded-full text-amber-400 font-mono font-black text-sm">
-                <Coins className="w-4 h-4" /> {goalData.coins.toLocaleString()} Coins Disponíveis
+                <Coins className="w-4 h-4" /> {currentGoalData.coins.toLocaleString()} Coins Disponíveis
               </div>
             </CardHeader>
             <CardContent className="pt-6">
@@ -462,10 +562,10 @@ export default function MetasPage() {
 
                     <Button 
                       onClick={() => handleRedeemReward(rw.title, rw.coins_cost)}
-                      disabled={goalData.coins < rw.coins_cost}
+                      disabled={currentGoalData.coins < rw.coins_cost}
                       className="w-full text-xs font-bold"
                     >
-                      {goalData.coins >= rw.coins_cost ? 'Resgatar Prêmio' : 'Coins Insuficientes'}
+                      {currentGoalData.coins >= rw.coins_cost ? 'Resgatar Prêmio' : 'Coins Insuficientes'}
                     </Button>
                   </div>
                 ))}
