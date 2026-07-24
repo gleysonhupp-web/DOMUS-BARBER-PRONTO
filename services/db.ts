@@ -576,7 +576,7 @@ function set<T>(key: string, value: T): void {
 // Stateful Database Operations Manager
 export const db = {
   getCurrentUser: (): UserProfile | null => {
-    return get<UserProfile | null>(KEYS.CURRENT_USER, defaultProfiles[0]);
+    return get<UserProfile | null>(KEYS.CURRENT_USER, null);
   },
   
   setCurrentUser: (user: UserProfile | null) => {

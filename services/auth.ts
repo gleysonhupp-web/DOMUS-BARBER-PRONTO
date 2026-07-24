@@ -84,17 +84,53 @@ export const authService = {
     if (isMockMode) {
 
       const profiles = db.getProfiles();
-      const user = profiles.find(p => p.email.toLowerCase() === email.toLowerCase());
+      const companies = db.getCompanies();
+      const defaultCompany = companies[0] || null;
+
+      let user = profiles.find(p => p.email.toLowerCase() === email.toLowerCase());
+
+      // Auto-register user profile for professional if created via modal
+      if (!user) {
+        const allProfs = defaultCompany ? db.getProfessionals(defaultCompany.id) : [];
+        const matchedProf = allProfs.find(p => (p.email && p.email.toLowerCase() === email.toLowerCase()) || p.name.toLowerCase() === email.toLowerCase());
+
+        if (matchedProf) {
+          user = {
+            id: matchedProf.user_id || `u-${matchedProf.id}`,
+            email: email.toLowerCase(),
+            full_name: matchedProf.name,
+            phone: matchedProf.phone || '',
+            avatar_url: matchedProf.avatar_url || null,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          };
+          profiles.push(user);
+          db.saveProfiles(profiles);
+
+          // Add member record as professional
+          const members = db.getMembers();
+          if (!members.some(m => m.user_id === user!.id)) {
+            members.push({
+              id: `m-${Date.now()}`,
+              company_id: defaultCompany?.id || 'c1111111-1111-1111-1111-111111111111',
+              user_id: user.id,
+              role_id: matchedProf.is_leader ? 'owner' : 'professional',
+              status: 'active',
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            });
+            db.saveMembers(members);
+          }
+        }
+      }
 
       if (!user) {
         return { success: false, error: 'E-mail ou senha incorretos.' };
       }
 
-      // In mock mode, we store a simple password in localStorage keyed by email.
-      // Default password for the demo account is '123456'
+      // Check stored password
       if (typeof window !== 'undefined') {
         const storedPasswords: Record<string, string> = JSON.parse(localStorage.getItem('domus_passwords') || '{}');
-        // Default password for existing demo user if not set
         if (!storedPasswords[email.toLowerCase()]) {
           storedPasswords[email.toLowerCase()] = '123456';
           localStorage.setItem('domus_passwords', JSON.stringify(storedPasswords));
@@ -109,15 +145,29 @@ export const authService = {
 
       // Find company for this user
       const members = db.getMembers();
-      const member = members.find(m => m.user_id === user.id && m.status === 'active');
+      let member = members.find(m => m.user_id === user.id && m.status === 'active');
       let company: Company | null = null;
 
+      if (!member && defaultCompany) {
+        // Fallback member assignment for professional
+        member = {
+          id: `m-${Date.now()}`,
+          company_id: defaultCompany.id,
+          user_id: user.id,
+          role_id: 'professional',
+          status: 'active',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+        members.push(member);
+        db.saveMembers(members);
+      }
+
       if (member) {
-        const companies = db.getCompanies();
-        company = companies.find(c => c.id === member.company_id) || null;
+        company = companies.find(c => c.id === member.company_id) || defaultCompany;
         db.setCurrentCompany(company);
       } else {
-        db.setCurrentCompany(null);
+        db.setCurrentCompany(defaultCompany);
       }
 
       db.logAudit(company?.id || null, user.id, 'user_signin', { email });
