@@ -584,35 +584,44 @@ export const db = {
   },
 
   checkIsCollaborator: (user: UserProfile | null, companyId: string): boolean => {
-    if (!user) return false;
-
-    // 1. Check member role in company_members
-    const members = get<CompanyMember[]>(KEYS.MEMBERS, defaultMembers);
-    const member = members.find(m => m.user_id === user.id && m.company_id === companyId);
-    if (member) {
-      if (member.role_id === 'professional') return true;
-      if (member.role_id === 'owner' || member.role_id === 'admin') return false;
+    // 0. If user not passed, read directly from localStorage cache
+    if (!user && typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('domus_current_user');
+        if (stored) user = JSON.parse(stored);
+      } catch (e) {}
     }
 
-    // 2. Check professional record matching email or name
+    if (!user) return false;
+
+    const email = user.email ? user.email.toLowerCase().trim() : '';
+    const name = user.full_name ? user.full_name.toLowerCase().trim() : '';
+
+    // 1. Explicit Gestor / Owner check (ONLY main owner account is Gestor)
+    const isMainOwner = email === 'admin@domusbarber.com.br' || name.includes('arthur pendragon');
+    if (isMainOwner) return false; // Gestor
+
+    // 2. Check professional record matching email or name in DB
     const profs = get<Professional[]>(KEYS.PROFESSIONALS, defaultProfessionals).filter(p => p.company_id === companyId);
     const prof = profs.find(p => 
       (p.user_id && p.user_id === user.id) ||
-      (p.email && p.email.toLowerCase() === user.email.toLowerCase()) || 
-      p.name.toLowerCase() === user.full_name.toLowerCase()
+      (p.email && p.email.toLowerCase().trim() === email) || 
+      (p.name && p.name.toLowerCase().trim() === name)
     );
 
     if (prof) {
       return !prof.is_leader;
     }
 
-    // 3. Main owner check by email
-    const gestorEmails = ['admin@domusbarber.com.br', 'gustavo', 'arthur'];
-    if (gestorEmails.some(e => user.email.toLowerCase().includes(e) || user.full_name.toLowerCase().includes(e))) {
-      return false;
+    // 3. Check company_members role
+    const members = get<CompanyMember[]>(KEYS.MEMBERS, defaultMembers);
+    const member = members.find(m => m.user_id === user.id && m.company_id === companyId);
+    if (member) {
+      if (member.role_id === 'owner' || member.role_id === 'admin') return false;
+      if (member.role_id === 'professional') return true;
     }
 
-    // Default: If not main gestor, treat as collaborator
+    // Default for any non-owner collaborator login is TRUE (Collaborator)
     return true;
   },
 
