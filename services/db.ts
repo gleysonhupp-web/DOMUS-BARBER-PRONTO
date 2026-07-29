@@ -576,18 +576,32 @@ function set<T>(key: string, value: T): void {
 // Stateful Database Operations Manager
 export const db = {
   getCurrentUser: (): UserProfile | null => {
-    return get<UserProfile | null>(KEYS.CURRENT_USER, null);
+    if (typeof window === 'undefined') return null;
+    try {
+      const sessionUser = sessionStorage.getItem(KEYS.CURRENT_USER);
+      if (sessionUser) return JSON.parse(sessionUser);
+      const localUser = localStorage.getItem(KEYS.CURRENT_USER);
+      if (localUser) return JSON.parse(localUser);
+    } catch (e) {}
+    return null;
   },
   
   setCurrentUser: (user: UserProfile | null) => {
-    set(KEYS.CURRENT_USER, user);
+    if (typeof window === 'undefined') return;
+    if (user) {
+      sessionStorage.setItem(KEYS.CURRENT_USER, JSON.stringify(user));
+      localStorage.setItem(KEYS.CURRENT_USER, JSON.stringify(user));
+    } else {
+      sessionStorage.removeItem(KEYS.CURRENT_USER);
+      localStorage.removeItem(KEYS.CURRENT_USER);
+    }
   },
 
   checkIsCollaborator: (user: UserProfile | null, companyId: string): boolean => {
-    // 0. If user not passed, read directly from localStorage cache
+    // 0. If user not passed, read directly from sessionStorage or localStorage cache
     if (!user && typeof window !== 'undefined') {
       try {
-        const stored = localStorage.getItem('domus_current_user');
+        const stored = sessionStorage.getItem('domus_current_user') || localStorage.getItem('domus_current_user');
         if (stored) user = JSON.parse(stored);
       } catch (e) {}
     }
