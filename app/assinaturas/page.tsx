@@ -40,6 +40,72 @@ export default function AssinaturasPage() {
   const [isPixTestModalOpen, setIsPixTestModalOpen] = useState(false);
   const [copiedTestPix, setCopiedTestPix] = useState(false);
 
+  // Edit Subscription Plan State
+  const [isEditPlanModalOpen, setIsEditPlanModalOpen] = useState(false);
+  const [editingPlan, setEditingPlan] = useState<ClientSubscriptionPlan | null>(null);
+  const [editPlanName, setEditPlanName] = useState('');
+  const [editPlanPrice, setEditPlanPrice] = useState<number>(99.90);
+  const [editPlanDescription, setEditPlanDescription] = useState('');
+  const [editPlanCuts, setEditPlanCuts] = useState<'unlimited' | number>('unlimited');
+  const [editPlanPerks, setEditPlanPerks] = useState('');
+  const [editPlanIsPopular, setEditPlanIsPopular] = useState(false);
+
+  const handleOpenEditPlan = (plan?: ClientSubscriptionPlan) => {
+    if (plan) {
+      setEditingPlan(plan);
+      setEditPlanName(plan.name);
+      setEditPlanPrice(plan.price);
+      setEditPlanDescription(plan.description || '');
+      setEditPlanCuts(plan.cuts_included);
+      setEditPlanPerks(plan.perks.join(', '));
+      setEditPlanIsPopular(!!plan.is_popular);
+    } else {
+      setEditingPlan(null);
+      setEditPlanName('');
+      setEditPlanPrice(99.90);
+      setEditPlanDescription('');
+      setEditPlanCuts('unlimited');
+      setEditPlanPerks('Cortes ilimitados no mês, Agendamento prioritário, Bebida cortesia');
+      setEditPlanIsPopular(false);
+    }
+    setIsEditPlanModalOpen(true);
+  };
+
+  const handleSavePlanSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editPlanName.trim() || editPlanPrice <= 0) {
+      toast('Nome do plano e valor mensal são obrigatórios.', 'warning', 'Atenção');
+      return;
+    }
+
+    const perksArray = editPlanPerks
+      .split(',')
+      .map(p => p.trim())
+      .filter(Boolean);
+
+    const planToSave: ClientSubscriptionPlan = {
+      id: editingPlan?.id || `plan-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      company_id: companyId,
+      name: editPlanName,
+      description: editPlanDescription,
+      price: Number(editPlanPrice),
+      cuts_included: editPlanCuts,
+      perks: perksArray.length > 0 ? perksArray : ['Cortes inclusos no mês', 'Atendimento com horário marcado'],
+      is_popular: editPlanIsPopular,
+      created_at: editingPlan?.created_at || new Date().toISOString()
+    };
+
+    db.updateClientSubscriptionPlan(planToSave);
+    setPlans(db.getClientSubscriptionPlans(companyId));
+    setIsEditPlanModalOpen(false);
+
+    toast(
+      `O plano "${planToSave.name}" foi salvo com o novo valor de ${formatCurrency(planToSave.price)}/mês!`,
+      'success',
+      '🏷️ Valor do Plano Atualizado'
+    );
+  };
+
   const handleSaveBankInfo = (e: React.FormEvent) => {
     e.preventDefault();
     db.saveBankInfo(bankInfo);
@@ -549,22 +615,41 @@ export default function AssinaturasPage() {
 
         {/* TAB 2: PLANS MANAGEMENT */}
         <TabsContent value="plans">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-sm font-extrabold text-foreground">Planos de Assinatura do Clube</h3>
+              <p className="text-xs text-muted-foreground">Configure os preços mensais e vantagens oferecidas para seus clientes assinantes.</p>
+            </div>
+            <Button onClick={() => handleOpenEditPlan()} className="text-xs font-extrabold">
+              <Plus className="w-4 h-4 mr-1.5" /> Criar Novo Plano
+            </Button>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {plans.map((p) => (
-              <Card key={p.id} className="border border-border/60 flex flex-col justify-between p-6 relative">
+              <Card key={p.id} className="border border-border/60 flex flex-col justify-between p-6 relative hover:border-amber-500/40 transition-all shadow-lg">
                 {p.is_popular && (
-                  <Badge variant="primary" className="absolute -top-3 left-6 bg-amber-500 font-bold text-[9px] shadow">
-                    Mais Escolhido pelos Clientes
+                  <Badge variant="primary" className="absolute -top-3 left-6 bg-gradient-to-r from-amber-500 to-amber-600 text-black font-extrabold text-[9px] shadow-md">
+                    👑 Mais Escolhido pelos Clientes
                   </Badge>
                 )}
 
                 <div>
-                  <h3 className="text-lg font-black text-foreground mb-1">{p.name}</h3>
+                  <div className="flex items-start justify-between gap-2 mb-1">
+                    <h3 className="text-lg font-black text-foreground">{p.name}</h3>
+                    <Button 
+                      onClick={() => handleOpenEditPlan(p)}
+                      variant="outline"
+                      className="text-[11px] font-bold text-amber-400 border-amber-500/30 hover:bg-amber-500/10 px-2.5 py-1 h-auto cursor-pointer"
+                    >
+                      ✏️ Editar Valor
+                    </Button>
+                  </div>
                   <p className="text-xs text-muted-foreground min-h-[36px] mb-4">{p.description}</p>
                   
-                  <div className="flex items-baseline gap-1 my-3">
+                  <div className="flex items-baseline gap-1 my-3 bg-amber-500/10 p-3 rounded-2xl border border-amber-500/20">
                     <span className="text-3xl font-black text-amber-400 font-mono">{formatCurrency(p.price)}</span>
-                    <span className="text-xs text-muted-foreground">/mês</span>
+                    <span className="text-xs text-amber-300 font-bold">/mês</span>
                   </div>
 
                   <div className="w-full border-t border-border/40 my-4" />
@@ -573,14 +658,23 @@ export default function AssinaturasPage() {
                     {p.perks.map((perk, i) => (
                       <li key={i} className="flex items-center gap-2">
                         <CheckCircle2 className="w-4 h-4 text-green-400 shrink-0" />
-                        <span>{perk}</span>
+                        <span className="text-foreground">{perk}</span>
                       </li>
                     ))}
                   </ul>
                 </div>
 
-                <div className="p-3 bg-secondary/30 rounded-xl text-center text-xs text-muted-foreground border border-border/40 font-mono">
-                  {p.cuts_included === 'unlimited' ? '✂️ Cortes Ilimitados' : `✂️ Até ${p.cuts_included} cortes/mês`}
+                <div className="space-y-3">
+                  <div className="p-3 bg-secondary/30 rounded-xl text-center text-xs font-bold text-amber-300 border border-border/40 font-mono">
+                    {p.cuts_included === 'unlimited' ? '✂️ Cortes Ilimitados no Mês' : `✂️ Até ${p.cuts_included} cortes por mês`}
+                  </div>
+
+                  <Button 
+                    onClick={() => handleOpenEditPlan(p)}
+                    className="w-full text-xs font-extrabold bg-gradient-to-r from-[#B86D43] via-[#D28859] to-[#9E5732] text-white hover:brightness-110 shadow-md"
+                  >
+                    ✏️ Alterar Valor de {formatCurrency(p.price)}
+                  </Button>
                 </div>
               </Card>
             ))}
@@ -998,6 +1092,117 @@ export default function AssinaturasPage() {
                 </Button>
                 <Button type="submit" className="flex-1">
                   Ativar Assinatura
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: EDITAR / CRIAR PLANO DE ASSINATURA */}
+      {isEditPlanModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-card border border-border rounded-3xl w-full max-w-lg p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 text-left">
+            <div className="flex items-center justify-between border-b border-border/40 pb-3">
+              <div>
+                <h3 className="font-black text-foreground text-base flex items-center gap-2">
+                  <Crown className="w-5 h-5 text-amber-400" /> {editingPlan ? 'Editar Valor do Plano' : 'Criar Novo Plano de Assinatura'}
+                </h3>
+                <p className="text-xs text-muted-foreground">Altere o preço mensal e as vantagens deste plano do clube.</p>
+              </div>
+              <button onClick={() => setIsEditPlanModalOpen(false)} className="text-muted-foreground hover:text-foreground">
+                <XCircle className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSavePlanSubmit} className="space-y-4">
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground block mb-1">Nome do Plano</label>
+                <Input
+                  type="text"
+                  placeholder="EX: Plano Ouro Ilimitado"
+                  value={editPlanName}
+                  onChange={e => setEditPlanName(e.target.value)}
+                  className="text-xs font-bold"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-amber-400 block mb-1">Valor Mensal (R$)</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-extrabold text-amber-400 font-mono">R$</span>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    placeholder="99.90"
+                    value={editPlanPrice}
+                    onChange={e => setEditPlanPrice(parseFloat(e.target.value) || 0)}
+                    className="text-sm font-black font-mono pl-9 text-amber-300"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground block mb-1">Descrição Curta</label>
+                <Input
+                  type="text"
+                  placeholder="Corte o cabelo ilimitado todos os meses por um preço fixo"
+                  value={editPlanDescription}
+                  onChange={e => setEditPlanDescription(e.target.value)}
+                  className="text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground block mb-1">Limite de Cortes por Mês</label>
+                <select
+                  value={editPlanCuts}
+                  onChange={e => {
+                    const val = e.target.value;
+                    setEditPlanCuts(val === 'unlimited' ? 'unlimited' : parseInt(val));
+                  }}
+                  className="w-full bg-secondary border border-border text-foreground text-xs rounded-lg px-3 py-2.5 outline-none font-bold"
+                >
+                  <option value="unlimited">✂️ Cortes Ilimitados no Mês</option>
+                  <option value="4">✂️ Até 4 Cortes por mês</option>
+                  <option value="2">✂️ Até 2 Cortes por mês</option>
+                  <option value="1">✂️ 1 Corte por mês</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground block mb-1">Benefícios Inclusos (Separados por vírgula)</label>
+                <Input
+                  type="text"
+                  placeholder="Cortes ilimitados no mês, Agendamento prioritário, Bebida cortesia"
+                  value={editPlanPerks}
+                  onChange={e => setEditPlanPerks(e.target.value)}
+                  className="text-xs"
+                />
+                <span className="text-[10px] text-muted-foreground block mt-1">Exemplo: Cortes ilimitados, Barba inclusa, Cerveja grátis</span>
+              </div>
+
+              <div className="flex items-center gap-2 p-3 bg-amber-500/10 rounded-xl border border-amber-500/20">
+                <input
+                  type="checkbox"
+                  id="chkPopular"
+                  checked={editPlanIsPopular}
+                  onChange={e => setEditPlanIsPopular(e.target.checked)}
+                  className="w-4 h-4 accent-amber-500 cursor-pointer"
+                />
+                <label htmlFor="chkPopular" className="text-xs font-bold text-amber-300 cursor-pointer select-none">
+                  👑 Destacar este plano como "Mais Escolhido pelos Clientes"
+                </label>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <Button type="button" variant="secondary" onClick={() => setIsEditPlanModalOpen(false)} className="flex-1 text-xs">
+                  Cancelar
+                </Button>
+                <Button type="submit" className="flex-1 text-xs font-extrabold bg-gradient-to-r from-amber-500 to-amber-600 text-black">
+                  Salvar Valor do Plano
                 </Button>
               </div>
             </form>

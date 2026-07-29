@@ -1016,6 +1016,17 @@ export const db = {
 
   saveClientSubscriptionPlans: (items: ClientSubscriptionPlan[]) => set(KEYS.CLIENT_SUBSCRIPTION_PLANS, items),
 
+  updateClientSubscriptionPlan: (plan: ClientSubscriptionPlan): void => {
+    const list = get<ClientSubscriptionPlan[]>(KEYS.CLIENT_SUBSCRIPTION_PLANS, defaultClientPlans);
+    const idx = list.findIndex(p => p.id === plan.id);
+    if (idx !== -1) {
+      list[idx] = plan;
+    } else {
+      list.push(plan);
+    }
+    set(KEYS.CLIENT_SUBSCRIPTION_PLANS, list);
+  },
+
   getClientSubscriptions: (companyId: string): ClientSubscription[] => {
     const list = get<ClientSubscription[]>(KEYS.CLIENT_SUBSCRIPTIONS, defaultClientSubscriptions);
     const clients = get<Client[]>(KEYS.CLIENTS, defaultClients);
