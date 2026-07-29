@@ -709,6 +709,7 @@ export default function AssinaturasPage() {
                         onChange={e => setBankInfo({ ...bankInfo, bank_name: e.target.value })}
                         className="w-full bg-secondary border border-border text-foreground text-xs rounded-lg px-3 py-2.5 outline-none font-bold"
                       >
+                        <option value="">-- Selecione o seu banco --</option>
                         <option value="Banco Nubank (0260)">Banco Nubank (0260)</option>
                         <option value="Banco Itaú Unibanco (0341)">Banco Itaú Unibanco (0341)</option>
                         <option value="Banco Bradesco (0237)">Banco Bradesco (0237)</option>
@@ -717,6 +718,7 @@ export default function AssinaturasPage() {
                         <option value="Banco Inter (0077)">Banco Inter (0077)</option>
                         <option value="Banco C6 Bank (0336)">Banco C6 Bank (0336)</option>
                         <option value="Caixa Econômica (0104)">Caixa Econômica (0104)</option>
+                        <option value="Outro Banco / Fintech">Outro Banco / Fintech</option>
                       </select>
                     </div>
 
@@ -737,7 +739,7 @@ export default function AssinaturasPage() {
                       <label className="text-xs font-semibold text-muted-foreground block mb-1">Número da Agência</label>
                       <Input
                         type="text"
-                        placeholder="0001"
+                        placeholder="Digite a agência (ex: 0001)"
                         value={bankInfo.agency}
                         onChange={e => setBankInfo({ ...bankInfo, agency: e.target.value })}
                         className="text-xs font-mono"
@@ -748,7 +750,7 @@ export default function AssinaturasPage() {
                       <label className="text-xs font-semibold text-muted-foreground block mb-1">Conta com Dígito</label>
                       <Input
                         type="text"
-                        placeholder="1234567-8"
+                        placeholder="Digite a conta (ex: 12345-6)"
                         value={bankInfo.account_number}
                         onChange={e => setBankInfo({ ...bankInfo, account_number: e.target.value })}
                         className="text-xs font-mono"
@@ -784,7 +786,7 @@ export default function AssinaturasPage() {
                       <label className="text-xs font-semibold text-muted-foreground block mb-1">Chave PIX Principal</label>
                       <Input
                         type="text"
-                        placeholder="Insira sua Chave PIX"
+                        placeholder="Digite sua chave PIX real (CNPJ, CPF, E-mail ou Celular)"
                         value={bankInfo.pix_key}
                         onChange={e => setBankInfo({ ...bankInfo, pix_key: e.target.value })}
                         className="text-xs font-mono"
@@ -795,7 +797,7 @@ export default function AssinaturasPage() {
                       <label className="text-xs font-semibold text-muted-foreground block mb-1">Nome do Titular / Razão Social</label>
                       <Input
                         type="text"
-                        placeholder="Domus Barber Club LTDA"
+                        placeholder="Digite o nome completo ou Razão Social no Banco"
                         value={bankInfo.holder_name}
                         onChange={e => setBankInfo({ ...bankInfo, holder_name: e.target.value })}
                         className="text-xs"
@@ -806,7 +808,7 @@ export default function AssinaturasPage() {
                       <label className="text-xs font-semibold text-muted-foreground block mb-1">CPF / CNPJ do Titular</label>
                       <Input
                         type="text"
-                        placeholder="12.345.678/0001-99"
+                        placeholder="Digite o CPF ou CNPJ da conta bancária"
                         value={bankInfo.holder_document}
                         onChange={e => setBankInfo({ ...bankInfo, holder_document: e.target.value })}
                         className="text-xs font-mono"

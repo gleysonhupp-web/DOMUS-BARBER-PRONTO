@@ -1109,23 +1109,23 @@ export const db = {
 
   // ─── Bank Info (Conta de Recebimento de Assinaturas) ───────────────
   getBankInfo: (companyId: string): BankInfo => {
-    const defaultInfo: BankInfo = {
+    const emptyInfo: BankInfo = {
       company_id: companyId,
-      bank_name: 'Banco Nubank (0260)',
+      bank_name: '',
       account_type: 'pj',
-      agency: '0001',
-      account_number: '1234567-8',
+      agency: '',
+      account_number: '',
       pix_key_type: 'cpf_cnpj',
-      pix_key: '12.345.678/0001-99',
-      holder_name: 'Domus Barber Club LTDA',
-      holder_document: '12.345.678/0001-99',
+      pix_key: '',
+      holder_name: '',
+      holder_document: '',
       gateway_provider: 'asaas',
-      gateway_api_key: '$asaas_api_key_prod_live_891283918239',
+      gateway_api_key: '',
       auto_payout_enabled: true,
       updated_at: new Date().toISOString()
     };
 
-    return get<BankInfo>(`domus_bank_info_${companyId}`, defaultInfo);
+    return get<BankInfo>(`domus_bank_info_${companyId}`, emptyInfo);
   },
 
   saveBankInfo: (bankInfo: BankInfo): void => {
