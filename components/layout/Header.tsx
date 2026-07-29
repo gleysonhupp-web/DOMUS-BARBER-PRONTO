@@ -128,17 +128,17 @@ export const Header = () => {
   ];
 
   return (
-    <header className="h-16 border-b border-border/40 bg-card/65 backdrop-blur-md flex items-center justify-between px-6 select-none relative z-30">
+    <header className="h-16 border-b border-border/40 bg-card/65 backdrop-blur-md flex items-center justify-between px-3 sm:px-6 select-none relative z-30">
       {/* Route title details */}
-      <div className="flex items-center gap-4">
-        <h2 className="text-base font-bold text-foreground">{getPageTitle()}</h2>
+      <div className="flex items-center gap-3">
+        <h2 className="text-sm sm:text-base font-bold text-foreground truncate max-w-[140px] sm:max-w-none">{getPageTitle()}</h2>
       </div>
 
       {/* Action controls */}
-      <div className="flex items-center gap-4.5">
-        {/* Fixed Company Name Label (No switcher dropdown) */}
+      <div className="flex items-center gap-2 sm:gap-4.5">
+        {/* Fixed Company Name Label */}
         {company && (
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border/40 bg-secondary/30 text-xs font-semibold text-foreground">
+          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border/40 bg-secondary/30 text-xs font-semibold text-foreground">
             <Building className="w-3.5 h-3.5 text-primary" />
             <span>{company.name}</span>
           </div>
@@ -159,7 +159,7 @@ export const Header = () => {
 
           {/* Notifications Popover Window */}
           {showNotifications && (
-            <div className="absolute right-0 mt-3 w-80 sm:w-96 bg-card border border-border/80 rounded-2xl shadow-2xl z-50 overflow-hidden text-left animate-in fade-in zoom-in-95 duration-150">
+            <div className="fixed inset-x-3 top-16 sm:absolute sm:inset-auto sm:right-0 sm:top-full sm:mt-3 w-auto sm:w-96 bg-[#1A1D24] border border-amber-500/30 rounded-2xl shadow-2xl z-50 overflow-hidden text-left animate-in fade-in zoom-in-95 duration-150">
               <div className="p-4 border-b border-border/40 flex items-center justify-between bg-secondary/30">
                 <div className="flex items-center gap-2">
                   <Bell className="w-4 h-4 text-primary" />

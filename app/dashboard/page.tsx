@@ -113,25 +113,25 @@ export default function DashboardPage() {
         title={`Dashboard Executivo`}
         description="Acompanhe todas as métricas financeiras e operacionais da sua barbearia em tempo real."
         actions={
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2 w-full sm:w-auto">
             <button 
               onClick={() => router.push('/financeiro')}
-              className="px-4 py-2 bg-secondary/80 text-secondary-foreground hover:bg-secondary rounded-lg text-sm font-bold border border-border/40 transition-all cursor-pointer"
+              className="flex-1 sm:flex-none px-3 sm:px-4 py-2 bg-secondary/80 text-secondary-foreground hover:bg-secondary rounded-xl text-xs sm:text-sm font-bold border border-border/40 transition-all cursor-pointer truncate"
             >
               Novo Lançamento
             </button>
             <button 
               onClick={() => router.push('/agenda')}
-              className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground hover:bg-bronze-500 rounded-lg text-sm font-bold shadow-md shadow-primary/10 transition-all cursor-pointer"
+              className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 text-black hover:brightness-110 rounded-xl text-xs sm:text-sm font-extrabold shadow-md shadow-amber-500/20 transition-all cursor-pointer truncate"
             >
-              <Plus className="w-4 h-4" /> Novo Agendamento
+              <Plus className="w-4 h-4 shrink-0" /> Novo Agendamento
             </button>
           </div>
         }
       />
 
       {/* Main Metrics (Top Row) */}
-      <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-5 gap-4 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 mb-6">
         <MetricCard title="Faturamento Hoje" value={formatCurrency(revenueToday)} icon={<DollarSign className="w-5 h-5 text-green-400" />} />
         <MetricCard title="Faturamento Mês" value={formatCurrency(revenueMonth)} icon={<TrendingUp className="w-5 h-5 text-primary" />} />
         <MetricCard title="Agendamentos Hoje" value={activeAptsToday.length} icon={<Calendar className="w-5 h-5 text-blue-400" />} />

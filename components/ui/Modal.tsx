@@ -79,25 +79,25 @@ export const Modal = ({
               )}
             >
               {/* Header */}
-              <div className="flex items-start justify-between p-6 pb-4 border-b border-border/40">
+              <div className="flex items-start justify-between p-4 sm:p-6 pb-3 sm:pb-4 border-b border-border/40">
                 <div className="flex flex-col gap-0.5">
-                  <h2 className="text-xl font-bold tracking-tight text-foreground">{title}</h2>
+                  <h2 className="text-base sm:text-xl font-bold tracking-tight text-foreground">{title}</h2>
                   {description && (
-                    <p className="text-sm text-muted-foreground">{description}</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">{description}</p>
                   )}
                 </div>
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={onClose}
-                  className="h-8 w-8 rounded-full border border-border/40 hover:bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground"
+                  className="h-8 w-8 rounded-full border border-border/40 hover:bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground shrink-0"
                 >
                   <X className="w-4 h-4" />
                 </Button>
               </div>
 
               {/* Content body */}
-              <div className="flex-1 overflow-y-auto p-6">
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6">
                 {children}
               </div>
             </motion.div>
