@@ -611,9 +611,18 @@ export const db = {
     const email = user.email ? user.email.toLowerCase().trim() : '';
     const name = user.full_name ? user.full_name.toLowerCase().trim() : '';
 
-    // 1. Explicit Gestor / Owner check (ONLY main owner account is Gestor)
-    const isMainOwner = email === 'admin@domusbarber.com.br' || name.includes('arthur pendragon');
-    if (isMainOwner) return false; // Gestor
+    // 1. Explicit Gestor / Owner check (Gustavo, Admin, Owner are GESTOR)
+    const isGestorAccount = 
+      email.includes('gustavo') || 
+      name.includes('gustavo') || 
+      email === 'admin@domusbarber.com.br' || 
+      name.includes('arthur pendragon') ||
+      email.includes('gestor') ||
+      name.includes('gestor') ||
+      email.includes('owner') ||
+      name.includes('owner');
+
+    if (isGestorAccount) return false; // Gestor (isCollaborator = false)
 
     // 2. Check professional record matching email or name in DB
     const profs = get<Professional[]>(KEYS.PROFESSIONALS, defaultProfessionals).filter(p => p.company_id === companyId);
@@ -635,7 +644,7 @@ export const db = {
       if (member.role_id === 'professional') return true;
     }
 
-    // Default for any non-owner collaborator login is TRUE (Collaborator)
+    // Default for collaborator login
     return true;
   },
 
