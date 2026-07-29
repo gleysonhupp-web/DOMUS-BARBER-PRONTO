@@ -8,7 +8,7 @@ import { cn } from '../../lib/utils';
 import {
   LayoutDashboard, Calendar, Users, DollarSign, Menu, X,
   Scissors, UserCheck, Package, Target, Link as LinkIcon,
-  MessageSquareCode, Brain, Settings, LogOut, ChevronRight, Building
+  MessageSquareCode, Brain, Settings, LogOut, ChevronRight, Building, Crown
 } from 'lucide-react';
 
 import { db } from '../../services/db';
@@ -49,6 +49,7 @@ export const BottomNav = () => {
     { name: 'Visão Geral', href: '/dashboard', icon: LayoutDashboard, category: 'Gestão' },
     { name: 'Agenda de Serviços', href: '/agenda', icon: Calendar, category: 'Operacional' },
     { name: 'Gestão de Clientes', href: '/clientes', icon: Users, category: 'Operacional' },
+    { name: 'Assinaturas Clube', href: '/assinaturas', icon: Crown, category: 'Clube VIP', highlight: true },
     { name: 'Catálogo de Serviços', href: '/servicos', icon: Scissors, category: 'Cadastros' },
     { name: 'Equipe Profissional', href: '/profissionais', icon: UserCheck, category: 'Cadastros' },
     { name: 'Fluxo Financeiro', href: '/financeiro', icon: DollarSign, category: 'Gestão' },
@@ -151,15 +152,17 @@ export const BottomNav = () => {
                     href={item.href}
                     onClick={() => setIsMoreMenuOpen(false)}
                     className={cn(
-                      "flex items-center gap-3 p-3 rounded-2xl border transition-all cursor-pointer text-left",
+                      "flex items-center gap-3 p-3 rounded-2xl border transition-all cursor-pointer text-left relative overflow-hidden",
                       isActive
-                        ? "bg-gradient-to-r from-amber-500/20 to-amber-600/10 border-amber-500/50 text-white font-extrabold shadow-lg"
+                        ? "bg-gradient-to-r from-amber-500/25 to-amber-600/15 border-amber-500 text-white font-extrabold shadow-lg"
+                        : item.highlight
+                        ? "bg-gradient-to-r from-amber-500/10 via-[#242730] to-[#242730] border-amber-500/40 text-amber-300 font-bold"
                         : "bg-[#242730] border-gray-800 text-gray-300 hover:border-amber-500/30 hover:text-white"
                     )}
                   >
                     <div className={cn(
                       "w-9 h-9 rounded-xl flex items-center justify-center shrink-0",
-                      isActive ? "bg-amber-500 text-black font-bold" : "bg-black/30 text-amber-400"
+                      isActive ? "bg-amber-500 text-black font-bold" : item.highlight ? "bg-amber-500/20 text-amber-400 border border-amber-500/30" : "bg-black/30 text-amber-400"
                     )}>
                       <Icon className="w-4.5 h-4.5" />
                     </div>
