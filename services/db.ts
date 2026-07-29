@@ -921,7 +921,28 @@ export const db = {
     const list = get<Client[]>(KEYS.CLIENTS, defaultClients);
     const mainComp = get<Company | null>(KEYS.CURRENT_COMPANY, defaultCompanies[0]);
     if (mainComp) client.company_id = mainComp.id;
-    list.push(client);
+
+    const cleanPhone = client.phone ? client.phone.replace(/\D/g, '') : '';
+    if (cleanPhone) {
+      const existingIdx = list.findIndex(c => 
+        (c.company_id === client.company_id || !client.company_id) && 
+        c.phone && c.phone.replace(/\D/g, '') === cleanPhone
+      );
+
+      if (existingIdx !== -1) {
+        list[existingIdx] = {
+          ...list[existingIdx],
+          name: client.name || list[existingIdx].name,
+          email: client.email || list[existingIdx].email,
+          notes: client.notes ? `${list[existingIdx].notes ? list[existingIdx].notes + ' | ' : ''}${client.notes}` : list[existingIdx].notes,
+          updated_at: new Date().toISOString()
+        };
+        set(KEYS.CLIENTS, list);
+        return list[existingIdx];
+      }
+    }
+
+    list.unshift(client);
     set(KEYS.CLIENTS, list);
     return client;
   },
@@ -930,7 +951,7 @@ export const db = {
     const list = get<Appointment[]>(KEYS.APPOINTMENTS, defaultAppointments);
     const mainComp = get<Company | null>(KEYS.CURRENT_COMPANY, defaultCompanies[0]);
     if (mainComp) appointment.company_id = mainComp.id;
-    list.push(appointment);
+    list.unshift(appointment);
     set(KEYS.APPOINTMENTS, list);
 
     if (typeof window !== 'undefined') {
@@ -941,14 +962,14 @@ export const db = {
 
   addFinancialTransaction: (transaction: FinancialTransaction): FinancialTransaction => {
     const list = get<FinancialTransaction[]>(KEYS.FINANCIALS, defaultFinancials);
-    list.push(transaction);
+    list.unshift(transaction);
     set(KEYS.FINANCIALS, list);
     return transaction;
   },
 
   addStockMovement: (movement: StockMovement): StockMovement => {
     const list = get<StockMovement[]>(KEYS.STOCK_MOVEMENTS, []);
-    list.push(movement);
+    list.unshift(movement);
     set(KEYS.STOCK_MOVEMENTS, list);
     return movement;
   },
@@ -964,7 +985,9 @@ export const db = {
 
   getClientByPhone: (companyId: string, phone: string): Client | null => {
     const list = get<Client[]>(KEYS.CLIENTS, defaultClients);
-    return list.find(c => c.company_id === companyId && c.phone === phone) || null;
+    const cleanInput = phone ? phone.replace(/\D/g, '') : '';
+    if (!cleanInput) return null;
+    return list.find(c => (c.company_id === companyId || !companyId) && c.phone && c.phone.replace(/\D/g, '') === cleanInput) || null;
   },
 
   getAllAppointmentsRaw: (): Appointment[] => {

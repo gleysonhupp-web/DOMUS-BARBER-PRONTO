@@ -89,8 +89,17 @@ export default function ClientesPage() {
     const now = new Date();
     const currentMonth = now.getMonth();
 
+    // Map appointments by client_id for O(N+M) speed
+    const apptsByClient = new Map<string, Appointment[]>();
+    for (const a of allAppts) {
+      if (!apptsByClient.has(a.client_id)) {
+        apptsByClient.set(a.client_id, []);
+      }
+      apptsByClient.get(a.client_id)!.push(a);
+    }
+
     const enriched: ClientWithMetrics[] = rawClients.map((client) => {
-      const clientAppts = allAppts.filter((a) => a.client_id === client.id);
+      const clientAppts = apptsByClient.get(client.id) || [];
       const completedAppts = clientAppts.filter((a) => a.status === 'completed');
       const cancelledCount = clientAppts.filter((a) => a.status === 'cancelled').length;
       const totalSpent = completedAppts.reduce((sum, a) => sum + a.total_price, 0);
