@@ -9,6 +9,7 @@ import { useToast } from '../ui/Toast';
 import { db } from '../../services/db';
 import { addMinutes, parseISO, isSameDay } from 'date-fns';
 import { formatCurrency } from '../../lib/utils';
+import { Edit3 } from 'lucide-react';
 import Badge from '../ui/Badge';
 
 interface AppointmentModalProps {
@@ -44,6 +45,7 @@ export default function AppointmentModal({
   const [formNotes, setFormNotes] = useState('');
   const [formStatus, setFormStatus] = useState('scheduled');
   const [formPaymentMethod, setFormPaymentMethod] = useState<string>('pix');
+  const [formTotalPrice, setFormTotalPrice] = useState<number | string>('');
   
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -62,6 +64,7 @@ export default function AppointmentModal({
           setFormNotes(apt.notes || '');
           setFormStatus(apt.status);
           setFormPaymentMethod(apt.payment_method || 'pix');
+          setFormTotalPrice(apt.total_price !== undefined ? apt.total_price : (apt.service?.price || 0));
         }
       } else {
         // Create mode
@@ -70,6 +73,7 @@ export default function AppointmentModal({
         setFormNotes('');
         setFormStatus('scheduled');
         setFormPaymentMethod('pix');
+        setFormTotalPrice('');
         
         if (defaultTime) {
           setFormDate(defaultTime.date.toISOString().split('T')[0]);
@@ -83,6 +87,14 @@ export default function AppointmentModal({
       }
     }
   }, [isOpen, appointmentId, defaultTime, companyId]);
+
+  const handleServiceSelect = (serviceId: string) => {
+    setFormService(serviceId);
+    const selected = services.find(s => s.id === serviceId);
+    if (selected) {
+      setFormTotalPrice(selected.price);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -128,6 +140,8 @@ export default function AppointmentModal({
       return;
     }
 
+    const finalPrice = formTotalPrice !== '' ? Number(formTotalPrice) : (selectedService?.price || 0);
+
     // Prepare apt object
     const aptData = {
       company_id: companyId,
@@ -139,7 +153,7 @@ export default function AppointmentModal({
       status: formStatus as any,
       payment_method: formPaymentMethod,
       notes: formNotes,
-      total_price: selectedService?.price || 0,
+      total_price: finalPrice,
       updated_at: new Date().toISOString(),
     };
 
@@ -183,7 +197,7 @@ export default function AppointmentModal({
         company_id: companyId,
         type: 'income' as const,
         category: 'service_appointment' as const,
-        amount: formPaymentMethod === 'subscription' ? 0 : (selectedService?.price || 0),
+        amount: formPaymentMethod === 'subscription' ? 0 : finalPrice,
         description: `Agendamento: ${selectedService?.name} (${selectedClient?.name}) - Prof: ${selectedProfessional?.name}`,
         date: formDate,
         payment_method: (formPaymentMethod === 'subscription' ? 'cash' : formPaymentMethod) as any,
@@ -255,7 +269,7 @@ export default function AppointmentModal({
         <Select
           label="Serviço"
           value={formService}
-          onChange={(e) => setFormService(e.target.value)}
+          onChange={(e) => handleServiceSelect(e.target.value)}
           options={[
             { value: '', label: 'Selecione o Serviço' },
             ...services.map(s => ({ value: s.id, label: `${s.name} — ${formatCurrency(s.price)} (${s.duration_minutes} min)` }))
@@ -288,14 +302,28 @@ export default function AppointmentModal({
         </div>
 
         {selectedService && (
-          <div className="flex justify-between items-center p-3 rounded-xl bg-secondary/30 border border-border/40 font-mono">
+          <div className="flex justify-between items-center p-3.5 rounded-2xl bg-[#242730] border border-amber-500/30 font-mono shadow-sm">
             <div className="flex flex-col">
               <span className="text-[10px] uppercase text-muted-foreground font-bold">Duração Estimada</span>
               <span className="text-sm font-extrabold text-foreground">{selectedService.duration_minutes} minutos</span>
             </div>
             <div className="flex flex-col items-end">
-              <span className="text-[10px] uppercase text-muted-foreground font-bold">Valor Total</span>
-              <span className="text-sm font-extrabold text-amber-400">{formatCurrency(selectedService.price)}</span>
+              <div className="flex items-center gap-1">
+                <span className="text-[10px] uppercase text-amber-400 font-extrabold">VALOR TOTAL</span>
+                <Edit3 className="w-3 h-3 text-amber-400" />
+              </div>
+              <div className="flex items-center gap-1.5 mt-1">
+                <span className="text-xs font-black text-amber-400">R$</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={formTotalPrice}
+                  onChange={(e) => setFormTotalPrice(e.target.value)}
+                  placeholder={selectedService.price.toFixed(2)}
+                  className="w-28 bg-[#1A1D24] border border-amber-500/60 focus:border-amber-400 text-amber-300 font-extrabold text-base rounded-xl px-2.5 py-1 text-right outline-none font-mono shadow-inner cursor-text"
+                  title="Digite para alterar o valor total cobrado neste atendimento"
+                />
+              </div>
             </div>
           </div>
         )}
