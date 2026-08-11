@@ -19,6 +19,7 @@ import WeekView from '../../components/agenda/WeekView';
 import MonthView from '../../components/agenda/MonthView';
 import ListView from '../../components/agenda/ListView';
 import AppointmentModal from '../../components/agenda/AppointmentModal';
+import OperatingHoursModal from '../../components/agenda/OperatingHoursModal';
 
 export type ViewType = 'day' | 'week' | 'month' | 'list';
 
@@ -35,6 +36,7 @@ export default function AgendaPage() {
   const [view, setView] = useState<ViewType>('day');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isOperatingHoursModalOpen, setIsOperatingHoursModalOpen] = useState(false);
   const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | null>(null);
   const [modalDefaultTime, setModalDefaultTime] = useState<{ date: Date, time: string, professionalId?: string } | null>(null);
 
@@ -136,17 +138,25 @@ export default function AgendaPage() {
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Button 
+              onClick={() => setIsOperatingHoursModalOpen(true)}
+              variant="outline"
+              className="text-amber-400 border-amber-500/40 hover:bg-amber-500/10 font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-sm"
+            >
+              <Clock className="w-3.5 h-3.5" /> Horários & Dias (Abrir/Fechar)
+            </Button>
+
+            <Button 
               onClick={handleToggleAgendaStatus} 
               variant={isAgendaOpen ? "outline" : "primary"}
-              className={isAgendaOpen ? "text-red-400 border-red-500/40 hover:bg-red-500/10 font-bold text-xs" : "bg-green-500 hover:bg-green-600 text-black font-extrabold text-xs shadow-lg shadow-green-500/20"}
+              className={isAgendaOpen ? "text-red-400 border-red-500/40 hover:bg-red-500/10 font-bold text-xs cursor-pointer" : "bg-green-500 hover:bg-green-600 text-black font-extrabold text-xs shadow-lg shadow-green-500/20 cursor-pointer"}
             >
               {isAgendaOpen ? (
                 <>
-                  <Lock className="w-3.5 h-3.5 mr-1.5" /> Fechar Agenda
+                  <Lock className="w-3.5 h-3.5 mr-1.5" /> Pausar Tudo
                 </>
               ) : (
                 <>
-                  <Unlock className="w-3.5 h-3.5 mr-1.5" /> Abrir Agenda
+                  <Unlock className="w-3.5 h-3.5 mr-1.5" /> Reabrir Tudo
                 </>
               )}
             </Button>
@@ -281,6 +291,15 @@ export default function AgendaPage() {
         services={services}
         clients={clients}
         companyId={company?.id}
+      />
+
+      <OperatingHoursModal
+        isOpen={isOperatingHoursModalOpen}
+        onClose={() => setIsOperatingHoursModalOpen(false)}
+        companyId={company?.id || ''}
+        onSaved={() => {
+          if (company) loadData(company.id);
+        }}
       />
 
     </DashboardLayout>

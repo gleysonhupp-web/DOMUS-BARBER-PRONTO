@@ -5,7 +5,7 @@ import {
   Company, UserProfile, CompanyMember, Service, Professional, 
   Client, Appointment, Product, StockMovement, FinancialTransaction, 
   WhatsAppConnection, AIConversation, SubscriptionPlan, CompanySubscription, AuditLog,
-  ClientSubscriptionPlan, ClientSubscription, BarberGoal, DailyMission, RewardItem, BankInfo
+  ClientSubscriptionPlan, ClientSubscription, BarberGoal, DailyMission, RewardItem, BankInfo, DayOperatingHours
 } from '../types';
 import { isMockMode } from '../lib/supabase';
 
@@ -1130,6 +1130,24 @@ export const db = {
 
   saveBankInfo: (bankInfo: BankInfo): void => {
     set(`domus_bank_info_${bankInfo.company_id}`, bankInfo);
+  },
+
+  // ─── Horários de Atendimento por Dia da Semana ─────────────────────
+  getOperatingHours: (companyId: string): DayOperatingHours[] => {
+    const defaultHours: DayOperatingHours[] = [
+      { dayKey: 'monday', dayName: 'SEGUNDA-FEIRA', active: false, openTime: '09:00', lunchStart: '12:00', lunchEnd: '13:00', closeTime: '18:00' },
+      { dayKey: 'tuesday', dayName: 'TERÇA-FEIRA', active: false, openTime: '09:00', lunchStart: '12:00', lunchEnd: '14:00', closeTime: '16:40' },
+      { dayKey: 'wednesday', dayName: 'QUARTA-FEIRA', active: true, openTime: '09:00', lunchStart: '12:00', lunchEnd: '14:00', closeTime: '17:20' },
+      { dayKey: 'thursday', dayName: 'QUINTA-FEIRA', active: true, openTime: '09:00', lunchStart: '12:00', lunchEnd: '14:00', closeTime: '17:20' },
+      { dayKey: 'friday', dayName: 'SEXTA-FEIRA', active: true, openTime: '09:00', lunchStart: '12:00', lunchEnd: '14:00', closeTime: '19:20' },
+      { dayKey: 'saturday', dayName: 'SÁBADO', active: true, openTime: '08:00', lunchStart: '12:00', lunchEnd: '13:00', closeTime: '19:00' },
+      { dayKey: 'sunday', dayName: 'DOMINGO', active: false, openTime: '09:00', lunchStart: '12:00', lunchEnd: '13:00', closeTime: '13:00' },
+    ];
+    return get<DayOperatingHours[]>(`domus_operating_hours_${companyId}`, defaultHours);
+  },
+
+  saveOperatingHours: (companyId: string, hours: DayOperatingHours[]): void => {
+    set(`domus_operating_hours_${companyId}`, hours);
   }
 };
 

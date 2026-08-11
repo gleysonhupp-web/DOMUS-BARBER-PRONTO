@@ -257,6 +257,42 @@ export default function PublicBookingPage({
       // Block past times
       if (isBefore(slotStart, new Date())) return true;
 
+      // Check Company Operating Hours
+      if (company?.id) {
+        const operatingHours = db.getOperatingHours(company.id);
+        const dayMap: Record<number, string> = {
+          0: 'sunday',
+          1: 'monday',
+          2: 'tuesday',
+          3: 'wednesday',
+          4: 'thursday',
+          5: 'friday',
+          6: 'saturday',
+        };
+        const dayKey = dayMap[date.getDay()];
+        const dayConfig = operatingHours.find((h) => h.dayKey === dayKey);
+
+        if (dayConfig) {
+          // If day is not active (NÃO ATENDENDO), block slot
+          if (!dayConfig.active) return true;
+
+          // Check open and close times
+          if (timeStr < dayConfig.openTime || timeStr >= dayConfig.closeTime) {
+            return true;
+          }
+
+          // Check lunch break
+          if (
+            dayConfig.lunchStart &&
+            dayConfig.lunchEnd &&
+            timeStr >= dayConfig.lunchStart &&
+            timeStr < dayConfig.lunchEnd
+          ) {
+            return true;
+          }
+        }
+      }
+
       // Check conflicting appointments
       const relevantAppts = appointments.filter(
         (apt) =>

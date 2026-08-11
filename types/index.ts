@@ -301,6 +301,14 @@ export interface BankInfo {
   gateway_api_key?: string;
   auto_payout_enabled: boolean;
   updated_at: string;
+}// ─── Operating Hours (Abrir & Fechar Agenda por Dia da Semana) ──────
+export interface DayOperatingHours {
+  dayKey: 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
+  dayName: string;
+  active: boolean;
+  openTime: string;
+  lunchStart: string;
+  lunchEnd: string;
+  closeTime: string;
 }
-
 
