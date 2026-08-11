@@ -7,7 +7,7 @@ import { db } from '../../services/db';
 import { cn, formatCurrency } from '../../lib/utils';
 import { 
   DollarSign, Calendar, UserCheck, TrendingUp, Sparkles, 
-  Plus, Users, Package, Brain, MessageSquare, ArrowRight, User, AlertTriangle
+  Plus, Users, Package, Brain, MessageSquare, ArrowRight, User, AlertTriangle, CreditCard, Zap, Coins
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Card from '../../components/ui/Card';
@@ -27,6 +27,7 @@ export default function DashboardPage() {
   const [clients, setClients] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [services, setServices] = useState<any[]>([]);
+  const [paymentPeriod, setPaymentPeriod] = useState<'today' | 'month' | 'all'>('month');
 
   const companyId = company?.id;
 
@@ -48,6 +49,32 @@ export default function DashboardPage() {
   const revenueToday = incomeTxs.filter(f => isSameDay(parseISO(f.date), today)).reduce((sum, curr) => sum + curr.amount, 0);
   const revenueWeek = incomeTxs.filter(f => parseISO(f.date) >= startOfWeek(today)).reduce((sum, curr) => sum + curr.amount, 0);
   const revenueMonth = incomeTxs.filter(f => parseISO(f.date) >= startOfMonth(today)).reduce((sum, curr) => sum + curr.amount, 0);
+
+  // Payment Method Breakdown Metrics
+  const incomeTxsPeriod = React.useMemo(() => {
+    if (paymentPeriod === 'today') {
+      return incomeTxs.filter(f => isSameDay(parseISO(f.date), today));
+    } else if (paymentPeriod === 'month') {
+      return incomeTxs.filter(f => parseISO(f.date) >= startOfMonth(today));
+    }
+    return incomeTxs;
+  }, [incomeTxs, paymentPeriod, today]);
+
+  const pixTxs = React.useMemo(() => incomeTxsPeriod.filter(f => f.payment_method === 'pix'), [incomeTxsPeriod]);
+  const cashTxs = React.useMemo(() => incomeTxsPeriod.filter(f => f.payment_method === 'cash'), [incomeTxsPeriod]);
+  const creditTxs = React.useMemo(() => incomeTxsPeriod.filter(f => f.payment_method === 'credit_card'), [incomeTxsPeriod]);
+  const debitTxs = React.useMemo(() => incomeTxsPeriod.filter(f => f.payment_method === 'debit_card'), [incomeTxsPeriod]);
+
+  const pixTotal = React.useMemo(() => pixTxs.reduce((sum, f) => sum + f.amount, 0), [pixTxs]);
+  const cashTotal = React.useMemo(() => cashTxs.reduce((sum, f) => sum + f.amount, 0), [cashTxs]);
+  const creditTotal = React.useMemo(() => creditTxs.reduce((sum, f) => sum + f.amount, 0), [creditTxs]);
+  const debitTotal = React.useMemo(() => debitTxs.reduce((sum, f) => sum + f.amount, 0), [debitTxs]);
+
+  const periodTotal = pixTotal + cashTotal + creditTotal + debitTotal;
+  const pixPercent = periodTotal > 0 ? (pixTotal / periodTotal) * 100 : 0;
+  const cashPercent = periodTotal > 0 ? (cashTotal / periodTotal) * 100 : 0;
+  const creditPercent = periodTotal > 0 ? (creditTotal / periodTotal) * 100 : 0;
+  const debitPercent = periodTotal > 0 ? (debitTotal / periodTotal) * 100 : 0;
 
   // Appointment Metrics
   const aptsToday = React.useMemo(() => appointments.filter(a => isSameDay(parseISO(a.start_time), today)), [appointments]);
@@ -141,6 +168,119 @@ export default function DashboardPage() {
           value={lowStockCount} 
           icon={<AlertTriangle className={cn("w-5 h-5", lowStockCount > 0 ? "text-red-400" : "text-muted-foreground")} />} 
         />
+      </div>
+
+      {/* Revenue Breakdown by Payment Method */}
+      <div className="mb-8 p-5 sm:p-6 rounded-2xl bg-card border border-border/60 shadow-xl text-left">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div>
+            <div className="flex items-center gap-2">
+              <CreditCard className="w-5 h-5 text-amber-400" />
+              <h3 className="text-base sm:text-lg font-black text-foreground">Receita por Forma de Pagamento</h3>
+            </div>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Valores detalhados por PIX, Dinheiro, Cartão de Crédito e Cartão de Débito.
+            </p>
+          </div>
+
+          {/* Period Filter Tabs */}
+          <div className="flex items-center gap-1 bg-secondary/40 p-1 rounded-xl border border-border/40 shrink-0 self-start sm:self-auto">
+            <button
+              onClick={() => setPaymentPeriod('today')}
+              className={cn(
+                "px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer",
+                paymentPeriod === 'today' ? "bg-amber-500 text-black shadow font-extrabold" : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              Hoje
+            </button>
+            <button
+              onClick={() => setPaymentPeriod('month')}
+              className={cn(
+                "px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer",
+                paymentPeriod === 'month' ? "bg-amber-500 text-black shadow font-extrabold" : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              Este Mês
+            </button>
+            <button
+              onClick={() => setPaymentPeriod('all')}
+              className={cn(
+                "px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer",
+                paymentPeriod === 'all' ? "bg-amber-500 text-black shadow font-extrabold" : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              Total Geral
+            </button>
+          </div>
+        </div>
+
+        {/* 4 Payment Cards Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-5">
+          {/* PIX */}
+          <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-950/30 via-card to-card border border-emerald-500/30 flex flex-col justify-between shadow-lg">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-extrabold text-emerald-400 uppercase tracking-wider flex items-center gap-1">
+                <Zap className="w-3.5 h-3.5 fill-emerald-400 text-emerald-400" /> PIX
+              </span>
+              <span className="text-[10px] font-bold text-emerald-300 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-full">{pixPercent.toFixed(0)}%</span>
+            </div>
+            <span className="text-xl sm:text-2xl font-black text-emerald-400 font-mono tracking-tight">{formatCurrency(pixTotal)}</span>
+            <span className="text-[10px] text-muted-foreground mt-1 block">{pixTxs.length} lançamento(s)</span>
+          </div>
+
+          {/* DINHEIRO */}
+          <div className="p-4 rounded-2xl bg-gradient-to-br from-green-950/30 via-card to-card border border-green-500/30 flex flex-col justify-between shadow-lg">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-extrabold text-green-400 uppercase tracking-wider flex items-center gap-1">
+                <Coins className="w-3.5 h-3.5 text-green-400" /> Dinheiro
+              </span>
+              <span className="text-[10px] font-bold text-green-300 bg-green-500/10 border border-green-500/30 px-2 py-0.5 rounded-full">{cashPercent.toFixed(0)}%</span>
+            </div>
+            <span className="text-xl sm:text-2xl font-black text-green-400 font-mono tracking-tight">{formatCurrency(cashTotal)}</span>
+            <span className="text-[10px] text-muted-foreground mt-1 block">{cashTxs.length} lançamento(s)</span>
+          </div>
+
+          {/* CARTÃO DE CRÉDITO */}
+          <div className="p-4 rounded-2xl bg-gradient-to-br from-purple-950/30 via-card to-card border border-purple-500/30 flex flex-col justify-between shadow-lg">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-extrabold text-purple-400 uppercase tracking-wider flex items-center gap-1">
+                <CreditCard className="w-3.5 h-3.5 text-purple-400" /> Cartão Crédito
+              </span>
+              <span className="text-[10px] font-bold text-purple-300 bg-purple-500/10 border border-purple-500/30 px-2 py-0.5 rounded-full">{creditPercent.toFixed(0)}%</span>
+            </div>
+            <span className="text-xl sm:text-2xl font-black text-purple-400 font-mono tracking-tight">{formatCurrency(creditTotal)}</span>
+            <span className="text-[10px] text-muted-foreground mt-1 block">{creditTxs.length} lançamento(s)</span>
+          </div>
+
+          {/* CARTÃO DE DÉBITO */}
+          <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-950/30 via-card to-card border border-blue-500/30 flex flex-col justify-between shadow-lg">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-extrabold text-blue-400 uppercase tracking-wider flex items-center gap-1">
+                <CreditCard className="w-3.5 h-3.5 text-blue-400" /> Cartão Débito
+              </span>
+              <span className="text-[10px] font-bold text-blue-300 bg-blue-500/10 border border-blue-500/30 px-2 py-0.5 rounded-full">{debitPercent.toFixed(0)}%</span>
+            </div>
+            <span className="text-xl sm:text-2xl font-black text-blue-400 font-mono tracking-tight">{formatCurrency(debitTotal)}</span>
+            <span className="text-[10px] text-muted-foreground mt-1 block">{debitTxs.length} lançamento(s)</span>
+          </div>
+        </div>
+
+        {/* Proportional Progress Bar */}
+        {periodTotal > 0 && (
+          <div className="space-y-1.5 pt-1">
+            <div className="h-3 w-full bg-secondary/60 rounded-full overflow-hidden flex shadow-inner border border-border/40">
+              {pixPercent > 0 && <div style={{ width: `${pixPercent}%` }} className="bg-emerald-500 h-full transition-all" title={`PIX: ${formatCurrency(pixTotal)} (${pixPercent.toFixed(1)}%)`} />}
+              {cashPercent > 0 && <div style={{ width: `${cashPercent}%` }} className="bg-green-500 h-full transition-all" title={`Dinheiro: ${formatCurrency(cashTotal)} (${cashPercent.toFixed(1)}%)`} />}
+              {creditPercent > 0 && <div style={{ width: `${creditPercent}%` }} className="bg-purple-500 h-full transition-all" title={`Cartão Crédito: ${formatCurrency(creditTotal)} (${creditPercent.toFixed(1)}%)`} />}
+              {debitPercent > 0 && <div style={{ width: `${debitPercent}%` }} className="bg-blue-500 h-full transition-all" title={`Cartão Débito: ${formatCurrency(debitTotal)} (${debitPercent.toFixed(1)}%)`} />}
+            </div>
+            <div className="flex items-center justify-between text-[11px] text-muted-foreground font-mono">
+              <span>Total no Período: <strong className="text-amber-400 font-extrabold">{formatCurrency(periodTotal)}</strong></span>
+              <span>{incomeTxsPeriod.length} entrada(s) contabilizada(s)</span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Charts Grid */}
