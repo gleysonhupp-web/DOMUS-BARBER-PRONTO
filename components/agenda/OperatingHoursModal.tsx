@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { X, Clock, Check, AlertCircle } from 'lucide-react';
+import { X, Clock, Check } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { db } from '../../services/db';
 import type { DayOperatingHours } from '../../types';
@@ -22,7 +22,9 @@ export const OperatingHoursModal: React.FC<OperatingHoursModalProps> = ({
   onSaved
 }) => {
   const { toast } = useToast();
-  const [schedule, setSchedule] = useState<DayOperatingHours[]>([]);
+  const [schedule, setSchedule] = useState<DayOperatingHours[]>(() => {
+    return companyId ? db.getOperatingHours(companyId) : [];
+  });
 
   useEffect(() => {
     if (isOpen && companyId) {
