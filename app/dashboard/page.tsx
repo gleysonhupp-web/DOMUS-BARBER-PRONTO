@@ -7,7 +7,7 @@ import { db } from '../../services/db';
 import { cn, formatCurrency } from '../../lib/utils';
 import { 
   DollarSign, Calendar, UserCheck, TrendingUp, Sparkles, 
-  Plus, Users, Package, Brain, MessageSquare, ArrowRight, User, AlertTriangle, CreditCard, Zap, Coins
+  Plus, Users, Package, Brain, MessageSquare, ArrowRight, User, AlertTriangle, CreditCard, Zap, Coins, Clock
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Card from '../../components/ui/Card';
@@ -43,6 +43,60 @@ export default function DashboardPage() {
 
   // Compute Metrics
   const today = new Date();
+
+  // Occupancy & Hours Distribution Metrics
+  const occupancyMetrics = React.useMemo(() => {
+    if (!companyId) return { workedHours: 0, idleHours: 0, closedHours: 0, totalAvailableHours: 0, occupancyRate: 0 };
+    
+    const operatingHours = db.getOperatingHours(companyId);
+    const activePros = db.getProfessionals(companyId).length || 1;
+    
+    let weeklyOpenHours = 0;
+    let weeklyClosedHours = 0;
+
+    operatingHours.forEach(h => {
+      if (h.active) {
+        const [opH, opM] = h.openTime.split(':').map(Number);
+        const [clH, clM] = h.closeTime.split(':').map(Number);
+        const openDuration = (clH + clM / 60) - (opH + opM / 60);
+
+        let lunchDuration = 0;
+        if (h.lunchStart && h.lunchEnd) {
+          const [lStartH, lStartM] = h.lunchStart.split(':').map(Number);
+          const [lEndH, lEndM] = h.lunchEnd.split(':').map(Number);
+          lunchDuration = (lEndH + lEndM / 60) - (lStartH + lStartM / 60);
+        }
+
+        const netDailyHours = Math.max(0, openDuration - lunchDuration);
+        weeklyOpenHours += netDailyHours;
+      } else {
+        weeklyClosedHours += 8;
+      }
+    });
+
+    const monthAvailableHoursPerPro = Math.round(weeklyOpenHours * 4.3);
+    const monthClosedHoursPerPro = Math.round(weeklyClosedHours * 4.3);
+    const totalAvailableHours = monthAvailableHoursPerPro * activePros;
+    const closedHours = monthClosedHoursPerPro * activePros;
+
+    const validMonthApts = appointments.filter(a => a.status !== 'cancelled' && parseISO(a.start_time) >= startOfMonth(today));
+    const totalWorkedMinutes = validMonthApts.reduce((acc, apt) => {
+      const serviceDur = apt.service?.duration_minutes || 30;
+      return acc + serviceDur;
+    }, 0);
+
+    const workedHours = Math.round(totalWorkedMinutes / 60);
+    const idleHours = Math.max(0, totalAvailableHours - workedHours);
+    const occupancyRate = totalAvailableHours > 0 ? Math.min(100, Math.round((workedHours / totalAvailableHours) * 100)) : 0;
+
+    return {
+      workedHours,
+      idleHours,
+      closedHours,
+      totalAvailableHours,
+      occupancyRate
+    };
+  }, [companyId, appointments, today]);
   
   // Financial Metrics
   const incomeTxs = React.useMemo(() => financials.filter(f => f.type === 'income'), [financials]);
@@ -158,9 +212,10 @@ export default function DashboardPage() {
       />
 
       {/* Main Metrics (Top Row) */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4 mb-6">
         <MetricCard title="Faturamento Hoje" value={formatCurrency(revenueToday)} icon={<DollarSign className="w-5 h-5 text-green-400" />} />
         <MetricCard title="Faturamento Mês" value={formatCurrency(revenueMonth)} icon={<TrendingUp className="w-5 h-5 text-primary" />} />
+        <MetricCard title="Taxa de Ocupação" value={`${occupancyMetrics.occupancyRate}%`} icon={<Clock className="w-5 h-5 text-amber-400" />} />
         <MetricCard title="Agendamentos Hoje" value={activeAptsToday.length} icon={<Calendar className="w-5 h-5 text-blue-400" />} />
         <MetricCard title="Ticket Médio" value={formatCurrency(avgTicket)} icon={<Sparkles className="w-5 h-5 text-amber-400" />} />
         <MetricCard 
@@ -168,6 +223,94 @@ export default function DashboardPage() {
           value={lowStockCount} 
           icon={<AlertTriangle className={cn("w-5 h-5", lowStockCount > 0 ? "text-red-400" : "text-muted-foreground")} />} 
         />
+      </div>
+
+      {/* Hours Distribution & Occupancy Card (Matching Mobile Reference Image) */}
+      <div className="mb-8 p-5 sm:p-6 rounded-2xl bg-card border border-border/60 shadow-xl text-left">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <Clock className="w-5 h-5 text-amber-400" />
+              <h3 className="text-base sm:text-lg font-black text-foreground">Distribuição de Horas & Taxa de Ocupação</h3>
+            </div>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Capacidade operacional e utilização da agenda neste mês.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 px-3.5 py-1.5 rounded-xl shrink-0 self-start sm:self-auto">
+            <span className="text-xs text-muted-foreground font-bold uppercase tracking-wider">Taxa de Ocupação:</span>
+            <span className="text-lg font-black text-amber-400 font-mono">{occupancyMetrics.occupancyRate}%</span>
+          </div>
+        </div>
+
+        {/* Capacity Subtitle */}
+        <div className="mb-3 flex items-center justify-between">
+          <span className="text-sm font-extrabold text-foreground font-mono">
+            {occupancyMetrics.totalAvailableHours} hrs disponíveis
+          </span>
+        </div>
+
+        {/* Multi-color Stacked Bar */}
+        {occupancyMetrics.totalAvailableHours > 0 ? (
+          <div className="h-10 w-full bg-[#1A1D24] rounded-2xl overflow-hidden flex p-1 border border-border/40 gap-1 shadow-inner">
+            {/* Trabalhadas (Green) */}
+            {occupancyMetrics.workedHours > 0 && (
+              <div
+                style={{ width: `${Math.max(10, (occupancyMetrics.workedHours / (occupancyMetrics.workedHours + occupancyMetrics.idleHours + (occupancyMetrics.closedHours || 1))) * 100)}%` }}
+                className="bg-emerald-500 rounded-xl h-full flex items-center justify-center text-black font-black text-xs font-mono transition-all shadow-md shrink-0"
+                title={`Trabalhadas: ${occupancyMetrics.workedHours} hrs`}
+              >
+                {occupancyMetrics.workedHours} hrs
+              </div>
+            )}
+            {/* Ocioso (Bronze/Orange) */}
+            {occupancyMetrics.idleHours > 0 && (
+              <div
+                style={{ width: `${Math.max(10, (occupancyMetrics.idleHours / (occupancyMetrics.workedHours + occupancyMetrics.idleHours + (occupancyMetrics.closedHours || 1))) * 100)}%` }}
+                className="bg-gradient-to-r from-amber-600 to-amber-700 rounded-xl h-full flex items-center justify-center text-white font-black text-xs font-mono transition-all shadow-md flex-1"
+                title={`Ocioso: ${occupancyMetrics.idleHours} hrs`}
+              >
+                {occupancyMetrics.idleHours} hrs
+              </div>
+            )}
+            {/* Fechada (Gray) */}
+            {occupancyMetrics.closedHours > 0 && (
+              <div
+                style={{ width: `${Math.max(10, (occupancyMetrics.closedHours / (occupancyMetrics.workedHours + occupancyMetrics.idleHours + (occupancyMetrics.closedHours || 1))) * 100)}%` }}
+                className="bg-gray-600 rounded-xl h-full flex items-center justify-center text-gray-200 font-black text-xs font-mono transition-all shadow-md shrink-0"
+                title={`Fechada: ${occupancyMetrics.closedHours} hrs`}
+              >
+                {occupancyMetrics.closedHours} hrs
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="h-10 w-full bg-secondary/40 rounded-2xl flex items-center justify-center text-xs text-muted-foreground font-bold">
+            Defina os horários de atendimento na agenda para calcular a distribuição de horas.
+          </div>
+        )}
+
+        {/* Legend Row */}
+        <div className="flex flex-wrap items-center gap-6 mt-4 text-xs font-bold text-muted-foreground">
+          <div className="flex items-center gap-2">
+            <div className="w-3.5 h-3.5 rounded-full bg-emerald-500 shadow-sm" />
+            <span className="text-foreground">Trabalhadas</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3.5 h-3.5 rounded-full bg-amber-600 shadow-sm" />
+            <span className="text-foreground">Ocioso</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3.5 h-3.5 rounded-full bg-gray-600 shadow-sm" />
+            <span className="text-foreground">Fechada</span>
+          </div>
+        </div>
+
+        {/* Notice Note matching reference image */}
+        <div className="mt-4 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center gap-2 text-xs text-amber-300 font-medium">
+          <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+          <span>Atenção: atendimentos por assinatura possuem regras específicas de contagem de horas.</span>
+        </div>
       </div>
 
       {/* Revenue Breakdown by Payment Method */}
