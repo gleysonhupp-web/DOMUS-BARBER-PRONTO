@@ -13,7 +13,9 @@ import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import Card from '../../components/ui/Card';
 import { Avatar } from '../../components/ui/Avatar';
-import { Plus, User, Percent, Pencil, Trash2, AlertTriangle, Camera, Key, Lock, Shield, Copy, MessageSquare, Check, Eye, EyeOff, Crown, Upload } from 'lucide-react';
+import { Plus, User, Percent, Pencil, Trash2, AlertTriangle, Camera, Key, Lock, Shield, Copy, MessageSquare, Check, Eye, EyeOff, Crown, Upload, Clock } from 'lucide-react';
+import type { DayOperatingHours } from '../../types';
+import { cn } from '../../lib/utils';
 
 export default function ProfissionaisPage() {
   const { toast } = useToast();
@@ -58,6 +60,7 @@ export default function ProfissionaisPage() {
   const [commission, setCommission] = useState('100');
   const [isLeader, setIsLeader] = useState(true);
   const [avatarUrl, setAvatarUrl] = useState('');
+  const [workSchedule, setWorkSchedule] = useState<DayOperatingHours[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const loadData = useCallback(() => {
@@ -205,6 +208,26 @@ export default function ProfissionaisPage() {
     toast('Nova senha gerada!', 'info', 'Senha');
   };
 
+  const handleToggleBarberDay = (index: number) => {
+    setWorkSchedule(prev => {
+      const next = [...prev];
+      next[index] = { ...next[index], active: !next[index].active };
+      return next;
+    });
+  };
+
+  const handleBarberTimeChange = (
+    index: number,
+    field: 'openTime' | 'lunchStart' | 'lunchEnd' | 'closeTime',
+    val: string
+  ) => {
+    setWorkSchedule(prev => {
+      const next = [...prev];
+      next[index] = { ...next[index], [field]: val };
+      return next;
+    });
+  };
+
   const openAddModal = () => {
     setEditingProf(null);
     setName('');
@@ -213,6 +236,7 @@ export default function ProfissionaisPage() {
     setCommission('100');
     setIsLeader(true);
     setAvatarUrl('');
+    setWorkSchedule(db.getDefaultBarberSchedule());
     setIsModalOpen(true);
   };
 
@@ -224,6 +248,7 @@ export default function ProfissionaisPage() {
     setCommission(String(prof.commission_rate ?? 100));
     setIsLeader(prof.is_leader ?? true);
     setAvatarUrl(prof.avatar_url || '');
+    setWorkSchedule(prof.work_schedule && prof.work_schedule.length > 0 ? prof.work_schedule : db.getDefaultBarberSchedule());
     setIsModalOpen(true);
   };
 
@@ -250,6 +275,7 @@ export default function ProfissionaisPage() {
               commission_rate: Number(commission), 
               is_leader: isLeader,
               avatar_url: avatarUrl || p.avatar_url,
+              work_schedule: workSchedule,
               updated_at: new Date().toISOString() 
             }
           : p
@@ -270,6 +296,7 @@ export default function ProfissionaisPage() {
         commission_rate: Number(commission),
         is_leader: isLeader,
         is_active: true,
+        work_schedule: workSchedule,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
@@ -533,6 +560,105 @@ export default function ProfissionaisPage() {
             <p className="text-xs text-muted-foreground/80 leading-relaxed pl-0.5">
               Um líder pode visualizar, agendar e gerenciar a agenda de outros profissionais.
             </p>
+          </div>
+
+          {/* Barber Schedule Section */}
+          <div className="p-4 rounded-2xl bg-[#1A1D26] border border-border/40 space-y-4">
+            <div className="flex items-center justify-between border-b border-gray-800/80 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+                  <Clock className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-black text-white uppercase tracking-wider">Horário de Atendimento do Barbeiro</h4>
+                  <p className="text-[10px] text-gray-400">Dias e horários específicos que este barbeiro trabalha.</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3 max-h-[320px] overflow-y-auto no-scrollbar pr-1">
+              {workSchedule.map((day, i) => (
+                <div key={day.dayKey} className="space-y-2.5 p-3 rounded-xl bg-[#12151E] border border-gray-800/60">
+                  {/* Day Header Row */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-black tracking-wider text-gray-200 uppercase">
+                      {day.dayName}
+                    </span>
+
+                    <div className="flex items-center gap-2">
+                      <span className={cn(
+                        "text-[10px] font-extrabold uppercase tracking-wide",
+                        day.active ? "text-emerald-400" : "text-gray-500"
+                      )}>
+                        {day.active ? 'ATENDENDO' : 'NÃO ATENDENDO'}
+                      </span>
+
+                      {/* Switch Toggle */}
+                      <button
+                        type="button"
+                        onClick={() => handleToggleBarberDay(i)}
+                        className={cn(
+                          "w-11 h-5 rounded-full p-0.5 transition-all duration-300 flex items-center cursor-pointer select-none relative",
+                          day.active ? "bg-emerald-500 justify-end shadow-md shadow-emerald-500/20" : "bg-[#2A303F] justify-start"
+                        )}
+                      >
+                        <div className="w-4 h-4 rounded-full bg-white shadow-md transform transition-transform" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Time Inputs */}
+                  <div className={cn(
+                    "grid grid-cols-4 gap-2 transition-all duration-200",
+                    !day.active ? "opacity-30 pointer-events-none grayscale" : "opacity-100"
+                  )}>
+                    {/* INÍCIO */}
+                    <div className="bg-[#1A1E29] border border-gray-800/80 rounded-xl p-2 flex flex-col items-center text-center">
+                      <input
+                        type="time"
+                        value={day.openTime}
+                        onChange={(e) => handleBarberTimeChange(i, 'openTime', e.target.value)}
+                        className="bg-transparent text-center font-extrabold text-xs text-white outline-none w-full cursor-pointer font-mono"
+                      />
+                      <span className="text-[8px] font-bold text-gray-400 block mt-1 uppercase">INÍCIO</span>
+                    </div>
+
+                    {/* ALMOÇO INÍCIO */}
+                    <div className="bg-[#1A1E29] border border-gray-800/80 rounded-xl p-2 flex flex-col items-center text-center">
+                      <input
+                        type="time"
+                        value={day.lunchStart}
+                        onChange={(e) => handleBarberTimeChange(i, 'lunchStart', e.target.value)}
+                        className="bg-transparent text-center font-extrabold text-xs text-gray-300 outline-none w-full cursor-pointer font-mono"
+                      />
+                      <span className="text-[8px] font-bold text-gray-500 block mt-1 uppercase">ALMOÇO</span>
+                    </div>
+
+                    {/* ALMOÇO FIM */}
+                    <div className="bg-[#1A1E29] border border-gray-800/80 rounded-xl p-2 flex flex-col items-center text-center">
+                      <input
+                        type="time"
+                        value={day.lunchEnd}
+                        onChange={(e) => handleBarberTimeChange(i, 'lunchEnd', e.target.value)}
+                        className="bg-transparent text-center font-extrabold text-xs text-gray-300 outline-none w-full cursor-pointer font-mono"
+                      />
+                      <span className="text-[8px] font-bold text-gray-500 block mt-1 uppercase">RETORNO</span>
+                    </div>
+
+                    {/* FIM */}
+                    <div className="bg-[#1A1E29] border border-gray-800/80 rounded-xl p-2 flex flex-col items-center text-center">
+                      <input
+                        type="time"
+                        value={day.closeTime}
+                        onChange={(e) => handleBarberTimeChange(i, 'closeTime', e.target.value)}
+                        className="bg-transparent text-center font-extrabold text-xs text-white outline-none w-full cursor-pointer font-mono"
+                      />
+                      <span className="text-[8px] font-bold text-gray-400 block mt-1 uppercase">FIM</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Bottom Full-Width Copper/Bronze Button: SALVAR */}

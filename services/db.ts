@@ -1148,6 +1148,16 @@ export const db = {
 
   saveOperatingHours: (companyId: string, hours: DayOperatingHours[]): void => {
     set(`domus_operating_hours_${companyId}`, hours);
-  }
+  },
+
+  getDefaultBarberSchedule: (): DayOperatingHours[] => [
+    { dayKey: 'monday', dayName: 'SEGUNDA-FEIRA', active: true, openTime: '09:00', lunchStart: '12:00', lunchEnd: '13:00', closeTime: '18:00' },
+    { dayKey: 'tuesday', dayName: 'TERÇA-FEIRA', active: true, openTime: '09:00', lunchStart: '12:00', lunchEnd: '13:00', closeTime: '18:00' },
+    { dayKey: 'wednesday', dayName: 'QUARTA-FEIRA', active: true, openTime: '09:00', lunchStart: '12:00', lunchEnd: '13:00', closeTime: '18:00' },
+    { dayKey: 'thursday', dayName: 'QUINTA-FEIRA', active: true, openTime: '09:00', lunchStart: '12:00', lunchEnd: '13:00', closeTime: '18:00' },
+    { dayKey: 'friday', dayName: 'SEXTA-FEIRA', active: true, openTime: '09:00', lunchStart: '12:00', lunchEnd: '13:00', closeTime: '19:00' },
+    { dayKey: 'saturday', dayName: 'SÁBADO', active: true, openTime: '08:00', lunchStart: '12:00', lunchEnd: '13:00', closeTime: '19:00' },
+    { dayKey: 'sunday', dayName: 'DOMINGO', active: false, openTime: '09:00', lunchStart: '12:00', lunchEnd: '13:00', closeTime: '13:00' },
+  ]
 };
 

@@ -74,6 +74,7 @@ export interface Professional {
   commission_rate: number;
   is_leader?: boolean;
   is_active: boolean;
+  work_schedule?: DayOperatingHours[];
   created_at: string;
   updated_at: string;
 }

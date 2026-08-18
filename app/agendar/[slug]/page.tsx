@@ -247,6 +247,20 @@ export default function PublicBookingPage({
   }, []);
 
   // ── Slot availability check ──────────────────────────────────────
+  const isBarberAvailableAtTime = (pro: Professional, date: Date, timeStr: string): boolean => {
+    if (!pro.work_schedule || pro.work_schedule.length === 0) return true;
+    const dayMap: Record<number, string> = {
+      0: 'sunday', 1: 'monday', 2: 'tuesday', 3: 'wednesday', 4: 'thursday', 5: 'friday', 6: 'saturday',
+    };
+    const dayKey = dayMap[date.getDay()];
+    const dayConfig = pro.work_schedule.find((h) => h.dayKey === dayKey);
+    if (!dayConfig) return true;
+    if (!dayConfig.active) return false;
+    if (timeStr < dayConfig.openTime || timeStr >= dayConfig.closeTime) return false;
+    if (dayConfig.lunchStart && dayConfig.lunchEnd && timeStr >= dayConfig.lunchStart && timeStr < dayConfig.lunchEnd) return false;
+    return true;
+  };
+
   const isSlotOccupied = useCallback(
     (date: Date, timeStr: string, profId: string | null): boolean => {
       const [hours, minutes] = timeStr.split(':').map(Number);
@@ -300,9 +314,10 @@ export default function PublicBookingPage({
       );
 
       if (anyProfessional && profId === null) {
-        // "Any professional" — slot is occupied only if ALL professionals are busy
+        // "Any professional" — slot is occupied only if ALL professionals are either unavailable or busy
         const activePros = professionals;
         return activePros.every((pro) => {
+          if (!isBarberAvailableAtTime(pro, date, timeStr)) return true;
           return relevantAppts.some((apt) => {
             if (apt.professional_id !== pro.id) return false;
             const aptStart = parseISO(apt.start_time);
@@ -312,6 +327,11 @@ export default function PublicBookingPage({
         });
       } else {
         // Specific professional
+        const pro = professionals.find((p) => p.id === profId);
+        if (pro && !isBarberAvailableAtTime(pro, date, timeStr)) {
+          return true;
+        }
+
         return relevantAppts.some((apt) => {
           if (apt.professional_id !== profId) return false;
           const aptStart = parseISO(apt.start_time);
@@ -320,7 +340,7 @@ export default function PublicBookingPage({
         });
       }
     },
-    [appointments, selectedService, anyProfessional, professionals],
+    [appointments, selectedService, anyProfessional, professionals, company],
   );
 
   // ── Determine the professional for an "any" booking ──────────────
@@ -337,6 +357,7 @@ export default function PublicBookingPage({
       );
 
       for (const pro of professionals) {
+        if (!isBarberAvailableAtTime(pro, date, timeStr)) continue;
         const hasConflict = relevantAppts.some((apt) => {
           if (apt.professional_id !== pro.id) return false;
           const aptStart = parseISO(apt.start_time);
