@@ -1083,12 +1083,31 @@ export const db = {
     const list = get<DailyMission[]>(KEYS.DAILY_MISSIONS, defaultDailyMissions);
     const idx = list.findIndex(m => m.id === missionId);
     if (idx !== -1) {
-      list[idx].completed = !list[idx].completed;
       if (list[idx].completed) {
-        list[idx].current = list[idx].target;
+        list[idx].completed = false;
+        list[idx].current = Math.max(0, list[idx].target - 1);
       } else {
-        list[idx].current = Math.max(0, list[idx].target - 2);
+        const nextVal = list[idx].current + 1;
+        if (nextVal >= list[idx].target) {
+          list[idx].current = list[idx].target;
+          list[idx].completed = true;
+        } else {
+          list[idx].current = nextVal;
+          list[idx].completed = false;
+        }
       }
+      set(KEYS.DAILY_MISSIONS, list);
+    }
+    return list.filter(m => m.company_id === companyId);
+  },
+
+  incrementDailyMission: (companyId: string, missionId: string, delta: number = 1): DailyMission[] => {
+    const list = get<DailyMission[]>(KEYS.DAILY_MISSIONS, defaultDailyMissions);
+    const idx = list.findIndex(m => m.id === missionId);
+    if (idx !== -1) {
+      const nextVal = Math.max(0, Math.min(list[idx].target, list[idx].current + delta));
+      list[idx].current = nextVal;
+      list[idx].completed = nextVal >= list[idx].target;
       set(KEYS.DAILY_MISSIONS, list);
     }
     return list.filter(m => m.company_id === companyId);

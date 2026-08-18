@@ -64,19 +64,44 @@ export default function MetasPage() {
   const [rewards] = useState(() => db.getRewardItems(companyId));
   const [activeTab, setActiveTab] = useState('overview');
 
+  useEffect(() => {
+    const reloadData = () => {
+      setMissions(db.getDailyMissions(companyId));
+    };
+
+    window.addEventListener('domus_data_changed', reloadData);
+    window.addEventListener('domus_appointment_created', reloadData);
+    window.addEventListener('storage', reloadData);
+
+    return () => {
+      window.removeEventListener('domus_data_changed', reloadData);
+      window.removeEventListener('domus_appointment_created', reloadData);
+      window.removeEventListener('storage', reloadData);
+    };
+  }, [companyId]);
+
   // Dynamic goal calculation per selected barber
   const selectedProf = professionals.find(p => p.id === selectedProfId) || professionals[0];
   
+  // Real DB calculations for selected professional
+  const realAppointments = db.getAppointments(companyId).filter(a => {
+    if (a.status === 'cancelled') return false;
+    if (selectedProfId && a.professional_id && a.professional_id !== selectedProfId) return false;
+    return true;
+  });
+  const realCutsCount = realAppointments.length;
+  const realRevenueSum = realAppointments.reduce((acc, a) => acc + (a.total_price || 50), 0);
+
   const getGoalDataForProf = (profId: string) => {
     const prof = professionals.find(p => p.id === profId);
     const baseGoal = db.getBarberGoal(companyId);
 
     // Realistic per-barber goal stats seed
     const mockPerProf: Record<string, Partial<any>> = {
-      'p-1': { level: 18, level_title: 'Master Barber', xp: 8450, next_level_xp: 10000, monthly_revenue_current: 8730, monthly_revenue_target: 12000, ranking_position: 2, streak_days: 15, domus_index: 865 },
-      'p-2': { level: 22, level_title: 'Legend Barber', xp: 14200, next_level_xp: 15000, monthly_revenue_current: 11850, monthly_revenue_target: 12000, ranking_position: 1, streak_days: 28, domus_index: 945 },
-      'p-3': { level: 14, level_title: 'Barbeiro Sênior', xp: 5900, next_level_xp: 7000, monthly_revenue_current: 6400, monthly_revenue_target: 8500, ranking_position: 3, streak_days: 12, domus_index: 820 },
-      'p-4': { level: 9, level_title: 'Barbeiro Pro', xp: 3100, next_level_xp: 4500, monthly_revenue_current: 4900, monthly_revenue_target: 7000, ranking_position: 4, streak_days: 7, domus_index: 760 },
+      'p-1': { level: 18, level_title: 'Master Barber', xp: 8450, next_level_xp: 10000, monthly_revenue_current: Math.max(8730, realRevenueSum), monthly_revenue_target: 12000, ranking_position: 2, streak_days: 15, domus_index: 865, monthly_cuts_current: Math.max(87, realCutsCount) },
+      'p-2': { level: 22, level_title: 'Legend Barber', xp: 14200, next_level_xp: 15000, monthly_revenue_current: Math.max(11850, realRevenueSum), monthly_revenue_target: 12000, ranking_position: 1, streak_days: 28, domus_index: 945, monthly_cuts_current: Math.max(92, realCutsCount) },
+      'p-3': { level: 14, level_title: 'Barbeiro Sênior', xp: 5900, next_level_xp: 7000, monthly_revenue_current: Math.max(6400, realRevenueSum), monthly_revenue_target: 8500, ranking_position: 3, streak_days: 12, domus_index: 820, monthly_cuts_current: Math.max(64, realCutsCount) },
+      'p-4': { level: 9, level_title: 'Barbeiro Pro', xp: 3100, next_level_xp: 4500, monthly_revenue_current: Math.max(4900, realRevenueSum), monthly_revenue_target: 7000, ranking_position: 4, streak_days: 7, domus_index: 760, monthly_cuts_current: Math.max(45, realCutsCount) },
     };
 
     const custom = mockPerProf[profId] || {
@@ -84,8 +109,9 @@ export default function MetasPage() {
       level_title: 'Barbeiro Sênior',
       xp: 4800,
       next_level_xp: 6000,
-      monthly_revenue_current: 7500,
+      monthly_revenue_current: Math.max(7500, realRevenueSum),
       monthly_revenue_target: 10000,
+      monthly_cuts_current: Math.max(70, realCutsCount),
       ranking_position: 3,
       streak_days: 10,
       domus_index: 830
@@ -107,12 +133,12 @@ export default function MetasPage() {
     ...(perProfOverrides[selectedProfId] || {})
   };
 
-  const handleToggleMission = (id: string) => {
-    const updated = db.toggleDailyMission(companyId, id);
+  const handleIncrementMission = (id: string, delta: number) => {
+    const updated = db.incrementDailyMission(companyId, id, delta);
     setMissions(updated);
 
     const mission = updated.find(m => m.id === id);
-    if (mission?.completed) {
+    if (mission?.completed && delta > 0) {
       const newXp = currentGoalData.xp + mission.xp_reward;
       const newCoins = currentGoalData.coins + Math.floor(mission.xp_reward / 2);
       
@@ -125,7 +151,7 @@ export default function MetasPage() {
         }
       }));
 
-      toast(`Missão de ${currentGoalData.profName} concluída! +${mission.xp_reward} XP e +${Math.floor(mission.xp_reward / 2)} Coins!`, 'success', '🎯 Meta Batida!');
+      toast(`Missão de "${currentGoalData.profName}" concluída! +${mission.xp_reward} XP e +${Math.floor(mission.xp_reward / 2)} Coins!`, 'success', '🎯 Meta Batida!');
     }
   };
 
@@ -501,7 +527,7 @@ export default function MetasPage() {
               </CardContent>
             </Card>
 
-            {/* Missões do Dia (Interactive List matching Mockup #1 & #3) */}
+            {/* Missões do Dia (Interactive List with Step-by-Step Progress) */}
             <Card className="border border-border/60">
               <CardHeader className="pb-2 flex flex-row items-center justify-between">
                 <div>
@@ -515,38 +541,60 @@ export default function MetasPage() {
                 </Badge>
               </CardHeader>
               <CardContent className="space-y-3">
-                {missions.map((m) => (
-                  <div 
-                    key={m.id}
-                    onClick={() => handleToggleMission(m.id)}
-                    className={`p-3.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
-                      m.completed 
-                        ? 'bg-green-500/10 border-green-500/30 text-muted-foreground' 
-                        : 'bg-secondary/20 border-border/40 hover:border-amber-500/40 hover:bg-secondary/40'
-                    }`}
-                  >
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className={`text-xs font-bold ${m.completed ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
+                {missions.map((m) => {
+                  const pct = Math.min(100, Math.round((m.current / m.target) * 100));
+                  return (
+                    <div 
+                      key={m.id}
+                      className={`p-3.5 rounded-xl border transition-all flex flex-col gap-2 ${
+                        m.completed 
+                          ? 'bg-green-500/10 border-green-500/30' 
+                          : 'bg-secondary/20 border-border/40 hover:border-amber-500/30'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className={`text-xs font-bold ${m.completed ? 'line-through text-emerald-400' : 'text-foreground'}`}>
                           {m.title}
                         </span>
                         <span className="text-[10px] font-bold text-purple-400 font-mono">+{m.xp_reward} XP</span>
                       </div>
-                      
-                      <div className="w-full bg-secondary h-1.5 rounded-full overflow-hidden mb-1">
+
+                      {/* Progress Bar Container */}
+                      <div className="w-full bg-secondary/80 h-2 rounded-full overflow-hidden p-0.5 border border-border/40">
                         <div 
-                          className={`h-full rounded-full ${m.completed ? 'bg-green-400' : 'bg-purple-500'}`} 
-                          style={{ width: `${(m.current / m.target) * 100}%` }} 
+                          className={`h-full rounded-full transition-all duration-300 ${m.completed ? 'bg-emerald-400 shadow-md shadow-emerald-500/30' : 'bg-gradient-to-r from-purple-500 to-indigo-500'}`} 
+                          style={{ width: `${pct}%` }} 
                         />
                       </div>
-                      
-                      <div className="flex justify-between text-[9px] text-muted-foreground font-mono">
-                        <span>Progresso: {m.current}/{m.target}</span>
-                        <span>{m.completed ? 'Concluído ✅' : 'Clique para atualizar'}</span>
+
+                      {/* Footer Info & Incremental Step Controls */}
+                      <div className="flex items-center justify-between text-[10px] text-muted-foreground font-mono">
+                        <span>Progresso: <strong className="text-foreground">{m.current}/{m.target}</strong> ({pct}%)</span>
+
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => handleIncrementMission(m.id, -1)}
+                            disabled={m.current <= 0}
+                            className="w-5 h-5 rounded-md bg-secondary hover:bg-secondary/80 disabled:opacity-30 text-foreground font-bold flex items-center justify-center text-xs transition-all cursor-pointer select-none"
+                            title="Diminuir 1"
+                          >
+                            -
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleIncrementMission(m.id, 1)}
+                            disabled={m.completed}
+                            className="px-2 py-0.5 rounded-md bg-amber-500 hover:bg-amber-600 active:scale-95 disabled:opacity-50 text-black font-extrabold text-[10px] flex items-center justify-center transition-all cursor-pointer select-none shadow"
+                            title="Incrementar +1"
+                          >
+                            {m.completed ? 'Concluído ✅' : '+1 Avançar'}
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </CardContent>
             </Card>
 
