@@ -13,13 +13,15 @@ import { useRouter } from 'next/navigation';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import { Avatar } from '../../components/ui/Avatar';
-import { format, parseISO, isSameDay, subDays, startOfWeek, startOfMonth } from 'date-fns';
+import { format, parseISO, isSameDay, subDays, startOfWeek, startOfMonth, isSameMonth, isAfter } from 'date-fns';
+import { useToast } from '../../components/ui/Toast';
 
 // Charts
 import { RevenueChart, CashflowChart, AppointmentsChart, TopServicesChart } from '../../components/dashboard/Charts';
 
 export default function DashboardPage() {
   const router = useRouter();
+  const { toast } = useToast();
   const company = db.getCurrentCompany();
 
   const [appointments, setAppointments] = useState<any[]>([]);
@@ -28,59 +30,100 @@ export default function DashboardPage() {
   const [products, setProducts] = useState<any[]>([]);
   const [services, setServices] = useState<any[]>([]);
   const [paymentPeriod, setPaymentPeriod] = useState<'today' | 'month' | 'all'>('month');
+  const [isAgendaOpen, setIsAgendaOpen] = useState<boolean>(true);
 
   const companyId = company?.id;
 
   useEffect(() => {
     if (companyId) {
-      setAppointments(db.getAppointments(companyId));
-      setFinancials(db.getFinancialTransactions(companyId));
-      setClients(db.getClients(companyId));
-      setProducts(db.getProducts(companyId));
-      setServices(db.getServices(companyId));
+      const loadDashboardData = () => {
+        setAppointments(db.getAppointments(companyId));
+        setFinancials(db.getFinancialTransactions(companyId));
+        setClients(db.getClients(companyId));
+        setProducts(db.getProducts(companyId));
+        setServices(db.getServices(companyId));
+        setIsAgendaOpen(db.getAgendaStatus(companyId));
+      };
+
+      loadDashboardData();
+
+      window.addEventListener('domus_appointment_created', loadDashboardData);
+      window.addEventListener('domus_agenda_status_changed', loadDashboardData);
+      window.addEventListener('domus_data_changed', loadDashboardData);
+      window.addEventListener('storage', loadDashboardData);
+
+      return () => {
+        window.removeEventListener('domus_appointment_created', loadDashboardData);
+        window.removeEventListener('domus_agenda_status_changed', loadDashboardData);
+        window.removeEventListener('domus_data_changed', loadDashboardData);
+        window.removeEventListener('storage', loadDashboardData);
+      };
     }
   }, [companyId]);
 
   // Compute Metrics
   const today = new Date();
 
-  // Occupancy & Hours Distribution Metrics
+  // Occupancy & Hours Distribution Metrics (Synchronized with Barber Schedules & Real Appointments)
   const occupancyMetrics = React.useMemo(() => {
     if (!companyId) return { workedHours: 0, idleHours: 0, closedHours: 0, totalAvailableHours: 0, occupancyRate: 0 };
     
-    const operatingHours = db.getOperatingHours(companyId);
-    const activePros = db.getProfessionals(companyId).length || 1;
+    const companyOperatingHours = db.getOperatingHours(companyId);
+    const profs = db.getProfessionals(companyId).filter(p => p.is_active !== false);
     
-    let weeklyOpenHours = 0;
-    let weeklyClosedHours = 0;
+    let totalWeeklyOpenHoursAllPros = 0;
+    let totalWeeklyClosedHoursAllPros = 0;
 
-    operatingHours.forEach(h => {
-      if (h.active) {
-        const [opH, opM] = h.openTime.split(':').map(Number);
-        const [clH, clM] = h.closeTime.split(':').map(Number);
-        const openDuration = (clH + clM / 60) - (opH + opM / 60);
+    const activeProfsList = profs.length > 0 ? profs : [{ work_schedule: companyOperatingHours }];
 
-        let lunchDuration = 0;
-        if (h.lunchStart && h.lunchEnd) {
-          const [lStartH, lStartM] = h.lunchStart.split(':').map(Number);
-          const [lEndH, lEndM] = h.lunchEnd.split(':').map(Number);
-          lunchDuration = (lEndH + lEndM / 60) - (lStartH + lStartM / 60);
+    activeProfsList.forEach(pro => {
+      const schedule = (pro.work_schedule && pro.work_schedule.length > 0) 
+        ? pro.work_schedule 
+        : companyOperatingHours;
+
+      schedule.forEach(h => {
+        const compDay = companyOperatingHours.find(c => c.dayKey === h.dayKey);
+        const isDayOpen = h.active && (compDay ? compDay.active : true);
+
+        if (isDayOpen) {
+          const [opH, opM] = h.openTime.split(':').map(Number);
+          const [clH, clM] = h.closeTime.split(':').map(Number);
+          const openDuration = (clH + clM / 60) - (opH + opM / 60);
+
+          let lunchDuration = 0;
+          if (h.lunchStart && h.lunchEnd) {
+            const [lStartH, lStartM] = h.lunchStart.split(':').map(Number);
+            const [lEndH, lEndM] = h.lunchEnd.split(':').map(Number);
+            lunchDuration = (lEndH + lEndM / 60) - (lStartH + lStartM / 60);
+          }
+
+          const netDailyHours = Math.max(0, openDuration - lunchDuration);
+          totalWeeklyOpenHoursAllPros += netDailyHours;
+          totalWeeklyClosedHoursAllPros += (24 - netDailyHours);
+        } else {
+          totalWeeklyClosedHoursAllPros += 24;
         }
-
-        const netDailyHours = Math.max(0, openDuration - lunchDuration);
-        weeklyOpenHours += netDailyHours;
-      } else {
-        weeklyClosedHours += 8;
-      }
+      });
     });
 
-    const monthAvailableHoursPerPro = Math.round(weeklyOpenHours * 4.3);
-    const monthClosedHoursPerPro = Math.round(weeklyClosedHours * 4.3);
-    const totalAvailableHours = monthAvailableHoursPerPro * activePros;
-    const closedHours = monthClosedHoursPerPro * activePros;
+    const totalAvailableHours = Math.round(totalWeeklyOpenHoursAllPros * 4.3);
+    const closedHours = Math.round(totalWeeklyClosedHoursAllPros * 4.3);
 
-    const validMonthApts = appointments.filter(a => a.status !== 'cancelled' && parseISO(a.start_time) >= startOfMonth(today));
+    // Filter valid appointments for current month and upcoming future client bookings
+    const monthStart = startOfMonth(today);
+    const validMonthApts = appointments.filter(a => {
+      if (a.status === 'cancelled' || a.status === 'no_show') return false;
+      const aptDate = parseISO(a.start_time);
+      return isSameMonth(aptDate, today) || isAfter(aptDate, monthStart);
+    });
+
     const totalWorkedMinutes = validMonthApts.reduce((acc, apt) => {
+      if (apt.start_time && apt.end_time) {
+        const startMs = parseISO(apt.start_time).getTime();
+        const endMs = parseISO(apt.end_time).getTime();
+        const diffMin = (endMs - startMs) / (1000 * 60);
+        if (diffMin > 0) return acc + diffMin;
+      }
       const serviceDur = apt.service?.duration_minutes || 30;
       return acc + serviceDur;
     }, 0);
@@ -210,6 +253,38 @@ export default function DashboardPage() {
           </div>
         }
       />
+
+      {/* Agenda Closed Alert Banner (Synchronized with Agenda Page) */}
+      {!isAgendaOpen && (
+        <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-red-950/80 via-red-900/60 to-red-950/80 border border-red-500/40 shadow-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-red-500/20 border border-red-500/40 flex items-center justify-center shrink-0 text-red-400 animate-pulse">
+              <AlertTriangle className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping" />
+                <h4 className="text-sm font-black text-white uppercase tracking-wider">Agenda Online Fechada no Momento</h4>
+              </div>
+              <p className="text-xs text-red-200/80 mt-0.5">
+                Seus clientes não conseguirão realizar agendamentos online pelo link público até você reabrir a agenda.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              if (companyId) {
+                db.setAgendaStatus(companyId, true);
+                setIsAgendaOpen(true);
+                toast('Agenda aberta com sucesso! Clientes já podem agendar normalmente no link público.', 'success', '🟢 Agenda Aberta');
+              }
+            }}
+            className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-black font-extrabold text-xs tracking-wider uppercase transition-all shadow-lg shadow-emerald-500/20 shrink-0 cursor-pointer"
+          >
+            🔓 Reabrir Agenda Agora
+          </button>
+        </div>
+      )}
 
       {/* Main Metrics (Top Row) */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4 mb-6">

@@ -570,6 +570,9 @@ function get<T>(key: string, defaultValue: T): T {
 function set<T>(key: string, value: T): void {
   if (typeof window !== 'undefined') {
     localStorage.setItem(key, JSON.stringify(value));
+    window.dispatchEvent(new CustomEvent('domus_data_changed', { detail: { key, value } }));
+    window.dispatchEvent(new CustomEvent('domus_appointment_created'));
+    window.dispatchEvent(new CustomEvent('domus_agenda_status_changed'));
   }
 }
 
