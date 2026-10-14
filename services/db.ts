@@ -32,6 +32,7 @@ const KEYS = {
   BARBER_GOALS: 'domus_barber_goals',
   DAILY_MISSIONS: 'domus_daily_missions',
   REWARD_ITEMS: 'domus_reward_items',
+  SAAS_PLANS: 'domus_saas_plans',
 };
 
 // Default seed data
@@ -761,14 +762,16 @@ export const db = {
   saveWhatsAppConnections: (items: WhatsAppConnection[]) => set(KEYS.WHATSAPP, items),
 
   getSubscriptionPlans: (): SubscriptionPlan[] => {
-    return defaultPlans;
+    return get<SubscriptionPlan[]>(KEYS.SAAS_PLANS, defaultPlans);
   },
+  saveSubscriptionPlans: (items: SubscriptionPlan[]) => set(KEYS.SAAS_PLANS, items),
 
   getCompanySubscription: (companyId: string): CompanySubscription | null => {
     const list = get<CompanySubscription[]>(KEYS.SUBSCRIPTIONS, defaultSubscriptions);
     const sub = list.find(item => item.company_id === companyId) || null;
     if (sub) {
-      sub.plan = defaultPlans.find(p => p.id === sub.plan_id);
+      const plans = get<SubscriptionPlan[]>(KEYS.SAAS_PLANS, defaultPlans);
+      sub.plan = plans.find(p => p.id === sub.plan_id) || defaultPlans[0];
     }
     return sub;
   },
@@ -781,6 +784,14 @@ export const db = {
         ...log,
         user: profiles.find(p => p.id === log.user_id) || undefined
       }));
+  },
+  getAllAuditLogs: (): AuditLog[] => {
+    const list = get<AuditLog[]>(KEYS.AUDIT_LOGS, []);
+    const profiles = get<UserProfile[]>(KEYS.USER_PROFILES, defaultProfiles);
+    return list.map(log => ({
+      ...log,
+      user: profiles.find(p => p.id === log.user_id) || undefined
+    }));
   },
   saveAuditLogs: (items: AuditLog[]) => set(KEYS.AUDIT_LOGS, items),
 
