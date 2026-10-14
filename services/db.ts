@@ -716,21 +716,17 @@ export const db = {
     const professionals = get<Professional[]>(KEYS.PROFESSIONALS, defaultProfessionals);
     const services = get<Service[]>(KEYS.SERVICES, defaultServices);
 
-    return list
-      .filter(item => 
-        !companyId || 
-        item.company_id === companyId || 
-        item.company_id.startsWith('virtual-') ||
-        companyId === DEFAULT_COMPANY_ID ||
-        item.company_id === DEFAULT_COMPANY_ID
-      )
-      .map(apt => ({
-        ...apt,
-        company_id: companyId || DEFAULT_COMPANY_ID,
-        client: clients.find(c => c.id === apt.client_id) || apt.client,
-        professional: professionals.find(p => p.id === apt.professional_id) || apt.professional,
-        service: services.find(s => s.id === apt.service_id) || apt.service,
-      }));
+    const filtered = companyId 
+      ? list.filter(item => item.company_id === companyId)
+      : list;
+
+    return filtered.map(apt => ({
+      ...apt,
+      company_id: companyId || apt.company_id || DEFAULT_COMPANY_ID,
+      client: clients.find(c => c.id === apt.client_id) || apt.client,
+      professional: professionals.find(p => p.id === apt.professional_id) || apt.professional,
+      service: services.find(s => s.id === apt.service_id) || apt.service,
+    }));
   },
   saveAppointments: (items: Appointment[]) => set(KEYS.APPOINTMENTS, items),
 
@@ -904,6 +900,7 @@ export const db = {
   getCompanyBySlug: (slug: string): Company | null => {
     const companies = get<Company[]>(KEYS.COMPANIES, defaultCompanies);
     const normalizedSlug = slug ? slug.toLowerCase().trim() : '';
+    if (!normalizedSlug) return companies[0] || defaultCompanies[0];
     
     // 1. Try exact or case-insensitive match
     let found = companies.find(c => c.slug?.toLowerCase() === normalizedSlug);
@@ -913,17 +910,13 @@ export const db = {
     found = companies.find(c => c.name?.toLowerCase().replace(/[^a-z0-9]/g, '-') === normalizedSlug);
     if (found) return found;
 
-    // 3. Main registered company fallback to ensure 100% ID synchronization across devices
-    const current = get<Company | null>(KEYS.CURRENT_COMPANY, null);
-    if (current) return current;
-
-    return companies[0] || defaultCompanies[0];
+    return null;
   },
 
   addClient: (client: Client): Client => {
     const list = get<Client[]>(KEYS.CLIENTS, defaultClients);
     const mainComp = get<Company | null>(KEYS.CURRENT_COMPANY, defaultCompanies[0]);
-    if (mainComp) client.company_id = mainComp.id;
+    if (!client.company_id && mainComp) client.company_id = mainComp.id;
 
     const cleanPhone = client.phone ? client.phone.replace(/\D/g, '') : '';
     if (cleanPhone) {
@@ -953,7 +946,7 @@ export const db = {
   addAppointment: (appointment: Appointment): Appointment => {
     const list = get<Appointment[]>(KEYS.APPOINTMENTS, defaultAppointments);
     const mainComp = get<Company | null>(KEYS.CURRENT_COMPANY, defaultCompanies[0]);
-    if (mainComp) appointment.company_id = mainComp.id;
+    if (!appointment.company_id && mainComp) appointment.company_id = mainComp.id;
     list.unshift(appointment);
     set(KEYS.APPOINTMENTS, list);
 

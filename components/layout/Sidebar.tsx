@@ -65,7 +65,7 @@ export const Sidebar = ({ className }: SidebarProps) => {
     >
       {/* Brand logo header */}
       <div className="h-16 flex items-center justify-between px-4 border-b border-border/40">
-        <Link href="/dashboard" className="flex items-center gap-3 overflow-hidden">
+        <Link href={isCollaborator ? "/agenda" : "/dashboard"} className="flex items-center gap-3 overflow-hidden">
           <div className="w-10 h-10 rounded-lg overflow-hidden shrink-0 border border-primary/30 shadow-md shadow-primary/10 bg-black flex items-center justify-center">
             <img src="/logo.jpg" alt="DOMUS BARBER CLUB" className="w-full h-full object-cover" />
           </div>

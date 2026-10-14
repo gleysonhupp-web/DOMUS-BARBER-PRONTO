@@ -11,6 +11,8 @@ import { db } from '../../services/db';
 import { Loader2, Lock, AlertTriangle, MessageSquare } from 'lucide-react';
 import Button from '../ui/Button';
 
+type dbSubscriptionItem = { id: string; [key: string]: unknown };
+
 export const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
   const router = useRouter();
   const pathname = usePathname();
@@ -62,7 +64,7 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
           const now = new Date().getTime();
           const end = new Date(sub.current_period_end).getTime();
 
-          let currentStatus = sub.status;
+          const currentStatus = sub.status;
 
           // If blocked by old trial date, auto-renew for 1 year in demo/test environment
           if ((currentStatus === 'trial' && now > end) || currentStatus === 'past_due' || currentStatus === 'canceled') {
@@ -70,8 +72,8 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
             subs[0].current_period_end = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
             
             if (typeof window !== 'undefined') {
-              const allSubs = JSON.parse(localStorage.getItem('domus_subscriptions') || '[]');
-              const updatedSubs = allSubs.map((s: any) => s.id === sub.id ? subs[0] : s);
+              const allSubs: dbSubscriptionItem[] = JSON.parse(localStorage.getItem('domus_subscriptions') || '[]');
+              const updatedSubs = allSubs.map((s) => s.id === sub.id ? subs[0] : s);
               localStorage.setItem('domus_subscriptions', JSON.stringify(updatedSubs));
             }
             setIsBlocked(false);

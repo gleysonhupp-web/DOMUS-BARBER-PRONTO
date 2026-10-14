@@ -28,7 +28,9 @@ export const OperatingHoursModal: React.FC<OperatingHoursModalProps> = ({
 
   useEffect(() => {
     if (isOpen && companyId) {
-      setSchedule(db.getOperatingHours(companyId));
+      Promise.resolve().then(() => {
+        setSchedule(db.getOperatingHours(companyId));
+      });
     }
   }, [isOpen, companyId]);
 
