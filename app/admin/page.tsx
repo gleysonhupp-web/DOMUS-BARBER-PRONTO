@@ -335,8 +335,8 @@ export default function SuperAdminPage() {
         <div className="max-w-7xl mx-auto w-full flex items-center justify-between gap-4">
           
           <div className="flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-red-500/20 to-red-600/10 border border-red-500/30 flex items-center justify-center text-red-400 shadow-lg shadow-red-500/10">
-              <ShieldAlert className="w-5 h-5" />
+            <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0 border border-amber-500/40 shadow-lg shadow-amber-500/10 bg-black flex items-center justify-center">
+              <img src="/logo.jpg" alt="DOMUS BARBER" className="w-full h-full object-cover" />
             </div>
             <div>
               <div className="flex items-center gap-2">

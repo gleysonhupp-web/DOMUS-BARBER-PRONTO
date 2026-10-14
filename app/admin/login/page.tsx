@@ -61,8 +61,8 @@ export default function AdminLoginPage() {
       >
         {/* Header */}
         <div className="flex flex-col items-center text-center gap-3">
-          <div className="w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center shadow-lg">
-            <ShieldAlert className="w-8 h-8 text-red-500" />
+          <div className="w-16 h-16 rounded-2xl overflow-hidden shrink-0 border border-amber-500/40 shadow-xl shadow-amber-500/10 bg-black flex items-center justify-center">
+            <img src="/logo.jpg" alt="DOMUS BARBER" className="w-full h-full object-cover" />
           </div>
           <div>
             <h1 className="text-lg font-black tracking-wider uppercase text-foreground">Área Restrita</h1>
